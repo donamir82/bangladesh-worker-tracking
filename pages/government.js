@@ -1,107 +1,187 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { workers, embassies, stats } from '../data/mockWorkers';
 import { 
-  Users, 
-  AlertTriangle, 
-  CheckCircle, 
-  MapPin, 
-  Building, 
-  Clock, 
-  DollarSign,
-  Activity,
-  Shield,
-  Phone
+  Users, AlertTriangle, CheckCircle, MapPin, Building, Clock, 
+  Activity, Shield, Search, ChevronRight, ChevronLeft, ChevronDown,
+  Filter, X, Eye, ArrowUpDown, Home, Globe, User, FileText,
+  TrendingUp, BarChart3, ArrowLeft
 } from 'lucide-react';
 
+const PAGE_SIZE = 10;
+
+function StatusBadge({ status }) {
+  const config = {
+    safe: { bg: 'bg-green-100', text: 'text-green-700', label: 'Safe' },
+    check_overdue: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Check Overdue' },
+    emergency: { bg: 'bg-red-100', text: 'text-red-700', label: 'Emergency' },
+  };
+  const c = config[status] || config.safe;
+  return <span className={`inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full ${c.bg} ${c.text}`}>{c.label}</span>;
+}
+
+function SalaryBadge({ status }) {
+  return status === 'paid'
+    ? <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-green-50 text-green-700">Paid</span>
+    : <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-red-50 text-red-700">Pending</span>;
+}
+
+function WorkerDetailModal({ worker, onClose }) {
+  if (!worker) return null;
+  return (
+    <div className="fixed inset-0 bg-black/50 overflow-y-auto h-full w-full z-50 flex items-start justify-center pt-10 pb-10" onClick={onClose}>
+      <div className="relative w-11/12 max-w-2xl shadow-2xl rounded-xl bg-white" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 border-b bg-gray-50 rounded-t-xl">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">{worker.name}</h3>
+            <p className="text-sm text-gray-500">{worker.id} • {worker.gender}, Age {worker.age}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <StatusBadge status={worker.status} />
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+          </div>
+        </div>
+        <div className="p-6 grid md:grid-cols-2 gap-6">
+          <div>
+            <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase tracking-wider">Personal</h4>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between"><dt className="text-gray-500">Passport</dt><dd className="font-medium">{worker.passport}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Phone</dt><dd className="font-medium">{worker.phone}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Home District</dt><dd className="font-medium">{worker.homeDistrict}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Emergency</dt><dd className="font-medium text-right max-w-[200px]">{worker.emergencyContact}</dd></div>
+              {worker.family.spouse && <div className="flex justify-between"><dt className="text-gray-500">Spouse</dt><dd className="font-medium">{worker.family.spouse}</dd></div>}
+              <div className="flex justify-between"><dt className="text-gray-500">Children</dt><dd className="font-medium">{worker.family.children}</dd></div>
+            </dl>
+          </div>
+          <div>
+            <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase tracking-wider">Employment</h4>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between"><dt className="text-gray-500">Employer</dt><dd className="font-medium text-right max-w-[200px]">{worker.employer}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Job Title</dt><dd className="font-medium">{worker.jobTitle}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Location</dt><dd className="font-medium">{worker.location.city}, {worker.destination}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Departure</dt><dd className="font-medium">{worker.departureDate}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Contract Expiry</dt><dd className="font-medium">{worker.contractExpiry}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Salary</dt><dd><SalaryBadge status={worker.salaryStatus} /></dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Health</dt><dd className="font-medium capitalize">{worker.healthStatus.replace(/_/g, ' ')}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Last Check-in</dt><dd className="font-medium">{new Date(worker.lastCheckIn).toLocaleString()}</dd></div>
+            </dl>
+          </div>
+        </div>
+        {worker.alerts && worker.alerts.length > 0 && (
+          <div className="mx-6 mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <h4 className="font-semibold text-red-900 mb-2 text-sm">⚠️ Active Alerts</h4>
+            {worker.alerts.map(a => (
+              <div key={a.id} className="text-sm text-red-800">
+                <span className="font-medium uppercase">{a.type}</span>: {a.message}
+                <div className="text-xs text-red-600 mt-0.5">{new Date(a.timestamp).toLocaleString()}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50 rounded-b-xl">
+          <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm">Close</button>
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Contact Embassy</button>
+          {worker.status === 'emergency' && <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">Emergency Action</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function GovernmentDashboard() {
-  const [selectedCountry, setSelectedCountry] = useState('all');
-  const [alertWorkers, setAlertWorkers] = useState([]);
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [view, setView] = useState('national'); // national | country | workers
+  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [jobFilter, setJobFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [sortField, setSortField] = useState('name');
+  const [sortDir, setSortDir] = useState('asc');
+  const [selectedWorker, setSelectedWorker] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    // Filter workers with alerts
-    const workersWithAlerts = workers.filter(worker => 
-      worker.status === 'emergency' || worker.status === 'check_overdue'
-    );
-    setAlertWorkers(workersWithAlerts);
+  // Breadcrumb navigation
+  const navigateTo = (v, country = null) => {
+    setView(v);
+    setSelectedCountry(country);
+    setPage(1);
+    setSearchQuery('');
+    setStatusFilter('all');
+    setJobFilter('all');
+  };
 
-    // Mock recent activity
-    setRecentActivity([
-      {
-        id: 1,
-        type: 'check_in',
-        message: 'Md. Abdul Rahman checked in from Riyadh',
-        time: '2 minutes ago',
-        country: 'Saudi Arabia'
-      },
-      {
-        id: 2,
-        type: 'alert',
-        message: 'Medical emergency alert from Nasir Ahmed in Kuwait',
-        time: '1 hour ago',
-        country: 'Kuwait',
-        priority: 'high'
-      },
-      {
-        id: 3,
-        type: 'check_in',
-        message: 'Salma Begum checked in from Muscat',
-        time: '3 hours ago',
-        country: 'Oman'
-      },
-      {
-        id: 4,
-        type: 'overdue',
-        message: 'Check-in overdue: Fatema Khatun (Dubai)',
-        time: '6 hours ago',
-        country: 'UAE'
-      }
-    ]);
+  // Filtered & sorted workers
+  const filteredWorkers = useMemo(() => {
+    let result = [...workers];
+    if (selectedCountry) result = result.filter(w => w.destination === selectedCountry);
+    if (statusFilter !== 'all') result = result.filter(w => w.status === statusFilter);
+    if (jobFilter !== 'all') result = result.filter(w => w.jobCategory === jobFilter);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(w =>
+        w.name.toLowerCase().includes(q) ||
+        w.id.toLowerCase().includes(q) ||
+        w.employer.toLowerCase().includes(q) ||
+        w.homeDistrict.toLowerCase().includes(q) ||
+        w.location.city.toLowerCase().includes(q)
+      );
+    }
+    result.sort((a, b) => {
+      let va = a[sortField] || '';
+      let vb = b[sortField] || '';
+      if (typeof va === 'string') va = va.toLowerCase();
+      if (typeof vb === 'string') vb = vb.toLowerCase();
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return result;
+  }, [selectedCountry, statusFilter, jobFilter, searchQuery, sortField, sortDir]);
+
+  const totalPages = Math.ceil(filteredWorkers.length / PAGE_SIZE);
+  const pagedWorkers = filteredWorkers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const toggleSort = (field) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
+  };
+
+  // Country stats
+  const countryStats = useMemo(() => {
+    const map = {};
+    workers.forEach(w => {
+      if (!map[w.destination]) map[w.destination] = { total: 0, safe: 0, overdue: 0, emergency: 0 };
+      map[w.destination].total++;
+      if (w.status === 'safe') map[w.destination].safe++;
+      else if (w.status === 'check_overdue') map[w.destination].overdue++;
+      else map[w.destination].emergency++;
+    });
+    return map;
   }, []);
 
-  const filteredWorkers = selectedCountry === 'all' 
-    ? workers 
-    : workers.filter(worker => worker.destination === selectedCountry);
-
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'safe': return 'text-green-600 bg-green-100';
-      case 'check_overdue': return 'text-yellow-600 bg-yellow-100';
-      case 'emergency': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch(status) {
-      case 'safe': return 'Safe';
-      case 'check_overdue': return 'Check Overdue';
-      case 'emergency': return 'Emergency';
-      default: return 'Unknown';
-    }
-  };
+  // Job category labels
+  const jobCategories = [...new Set(workers.map(w => w.jobCategory))].sort();
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+          <div className="flex justify-between items-center py-3">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-bangladesh-green rounded-lg flex items-center justify-center">
+              <Link href="/" className="w-10 h-10 bg-bangladesh-green rounded-lg flex items-center justify-center hover:bg-green-800 transition-colors">
                 <Shield className="h-6 w-6 text-white" />
-              </div>
+              </Link>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Government Dashboard</h1>
-                <p className="text-sm text-gray-500">Ministry of Expatriates' Welfare</p>
+                <h1 className="text-lg font-bold text-gray-900">Government Dashboard</h1>
+                <p className="text-xs text-gray-500">Ministry of Expatriates' Welfare</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">
-                Last updated: {new Date().toLocaleTimeString()}
+            <div className="flex items-center space-x-3">
+              <span className="text-xs text-gray-400 hidden sm:block">
+                Live • {new Date().toLocaleTimeString()}
               </span>
-              <div className="h-8 w-px bg-gray-300"></div>
-              <button className="bg-bangladesh-green text-white px-4 py-2 rounded-lg text-sm font-medium">
+              <button className="bg-bangladesh-green text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 transition-colors">
                 Generate Report
               </button>
             </div>
@@ -109,207 +189,379 @@ export default function GovernmentDashboard() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Total Workers</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalWorkers.toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-sm mb-6">
+          <button onClick={() => navigateTo('national')} className={`flex items-center gap-1 ${view === 'national' ? 'text-bangladesh-green font-semibold' : 'text-gray-500 hover:text-gray-700'}`}>
+            <Home className="w-4 h-4" /> National
+          </button>
+          {selectedCountry && (
+            <>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+              <button onClick={() => navigateTo('country', selectedCountry)} className={`flex items-center gap-1 ${view === 'country' ? 'text-bangladesh-green font-semibold' : 'text-gray-500 hover:text-gray-700'}`}>
+                <Globe className="w-4 h-4" /> {selectedCountry}
+              </button>
+            </>
+          )}
+          {view === 'workers' && (
+            <>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+              <span className="text-bangladesh-green font-semibold flex items-center gap-1">
+                <Users className="w-4 h-4" /> Workers
+              </span>
+            </>
+          )}
+        </nav>
 
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Safe Workers</p>
-                <p className="text-2xl font-bold text-green-600">{stats.safeWorkers.toLocaleString()}</p>
+        {/* ===== NATIONAL VIEW ===== */}
+        {view === 'national' && (
+          <>
+            {/* Key Metrics */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Workers</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalWorkers.toLocaleString()}</p>
+                  </div>
+                  <div className="p-3 bg-blue-50 rounded-xl"><Users className="h-6 w-6 text-blue-600" /></div>
+                </div>
               </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-green-600" />
+              <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Safe</p>
+                    <p className="text-2xl font-bold text-green-600 mt-1">{stats.safeWorkers.toLocaleString()}</p>
+                    <p className="text-xs text-green-600 mt-0.5">99.9% of total</p>
+                  </div>
+                  <div className="p-3 bg-green-50 rounded-xl"><CheckCircle className="h-6 w-6 text-green-600" /></div>
+                </div>
               </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Active Alerts</p>
-                <p className="text-2xl font-bold text-red-600">{stats.alertsActive}</p>
+              <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Alerts</p>
+                    <p className="text-2xl font-bold text-red-600 mt-1">{stats.alertsActive}</p>
+                    <p className="text-xs text-red-500 mt-0.5">{stats.emergencyCases} emergency</p>
+                  </div>
+                  <div className="p-3 bg-red-50 rounded-xl"><AlertTriangle className="h-6 w-6 text-red-600" /></div>
+                </div>
               </div>
-              <div className="p-3 bg-red-100 rounded-lg">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Today's Check-ins</p>
-                <p className="text-2xl font-bold text-bangladesh-green">{stats.checkInsToday.toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Activity className="h-6 w-6 text-bangladesh-green" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid lg:grid-cols-3 gap-8 mb-8">
-          {/* Embassy Status */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="p-6 border-b">
-                <h3 className="text-lg font-semibold text-gray-900">Embassy Overview</h3>
-              </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  {embassies.map(embassy => (
-                    <div key={embassy.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <Building className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-gray-900">{embassy.name}</h4>
-                          <p className="text-sm text-gray-500">{embassy.country}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-lg font-semibold text-gray-900">
-                          {embassy.workersCount.toLocaleString()}
-                        </div>
-                        <div className="text-sm text-gray-500">workers</div>
-                      </div>
-                      <div className="text-right">
-                        <div className={`text-lg font-semibold ${embassy.recentAlerts > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                          {embassy.recentAlerts}
-                        </div>
-                        <div className="text-sm text-gray-500">alerts</div>
-                      </div>
-                    </div>
-                  ))}
+              <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Check-ins Today</p>
+                    <p className="text-2xl font-bold text-bangladesh-green mt-1">{stats.checkInsToday.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">79.8% compliance</p>
+                  </div>
+                  <div className="p-3 bg-green-50 rounded-xl"><Activity className="h-6 w-6 text-bangladesh-green" /></div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Recent Activity */}
-          <div>
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="p-6 border-b">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+            {/* Embassy Cards — clickable */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-900">Embassy Overview</h3>
+                <button onClick={() => navigateTo('workers')} className="text-sm text-bangladesh-green hover:underline font-medium flex items-center gap-1">
+                  View All Workers <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  {recentActivity.map(activity => (
-                    <div key={activity.id} className="flex items-start space-x-3">
-                      <div className={`p-1 rounded-full ${
-                        activity.type === 'alert' ? 'bg-red-100' :
-                        activity.type === 'overdue' ? 'bg-yellow-100' :
-                        'bg-green-100'
-                      }`}>
-                        {activity.type === 'alert' ? 
-                          <AlertTriangle className="h-4 w-4 text-red-600" /> :
-                          activity.type === 'overdue' ?
-                          <Clock className="h-4 w-4 text-yellow-600" /> :
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        }
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {embassies.map(embassy => {
+                  const cs = countryStats[embassy.country] || { total: 0, safe: 0, overdue: 0, emergency: 0 };
+                  return (
+                    <div
+                      key={embassy.id}
+                      onClick={() => navigateTo('country', embassy.country)}
+                      className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-bangladesh-green/30 transition-all group"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-2xl">{embassy.flag}</span>
+                        <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-bangladesh-green transition-colors" />
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-900">{activity.message}</p>
-                        <p className="text-xs text-gray-500">{activity.time} • {activity.country}</p>
+                      <h4 className="font-semibold text-gray-900 text-sm">{embassy.country}</h4>
+                      <p className="text-xs text-gray-500 mb-3">{embassy.workersCount.toLocaleString()} workers</p>
+                      <div className="flex gap-2">
+                        <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">{cs.safe} safe</span>
+                        {cs.overdue > 0 && <span className="text-xs bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full">{cs.overdue} overdue</span>}
+                        {cs.emergency > 0 && <span className="text-xs bg-red-50 text-red-700 px-2 py-0.5 rounded-full">{cs.emergency} emergency</span>}
+                      </div>
+                      <div className="mt-3 text-xs text-gray-400">{cs.total} tracked in demo</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Alert Workers */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+              <div className="p-5 border-b flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-red-500" /> Workers Requiring Attention
+                </h3>
+                <span className="text-sm text-gray-500">{workers.filter(w => w.status !== 'safe').length} workers</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-100">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Worker</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Location</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Alert</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {workers.filter(w => w.status !== 'safe').map(worker => (
+                      <tr key={worker.id} className="hover:bg-gray-50">
+                        <td className="px-5 py-3">
+                          <div className="text-sm font-medium text-gray-900">{worker.name}</div>
+                          <div className="text-xs text-gray-500">{worker.id}</div>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="text-sm text-gray-900">{worker.location.city}</div>
+                          <div className="text-xs text-gray-500">{worker.destination}</div>
+                        </td>
+                        <td className="px-5 py-3"><StatusBadge status={worker.status} /></td>
+                        <td className="px-5 py-3">
+                          {worker.alerts?.[0] && <div className="text-xs text-gray-600 max-w-[200px]">{worker.alerts[0].message}</div>}
+                        </td>
+                        <td className="px-5 py-3">
+                          <button onClick={() => setSelectedWorker(worker)} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                            View Details
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ===== COUNTRY VIEW ===== */}
+        {view === 'country' && selectedCountry && (
+          <>
+            {(() => {
+              const embassy = embassies.find(e => e.country === selectedCountry);
+              const countryWorkers = workers.filter(w => w.destination === selectedCountry);
+              const safe = countryWorkers.filter(w => w.status === 'safe').length;
+              const overdue = countryWorkers.filter(w => w.status === 'check_overdue').length;
+              const emergency = countryWorkers.filter(w => w.status === 'emergency').length;
+              const jobBreakdown = {};
+              countryWorkers.forEach(w => { jobBreakdown[w.jobCategory] = (jobBreakdown[w.jobCategory] || 0) + 1; });
+
+              return (
+                <>
+                  <div className="flex items-center gap-3 mb-6">
+                    <button onClick={() => navigateTo('national')} className="p-2 rounded-lg hover:bg-gray-200 transition-colors">
+                      <ArrowLeft className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <span className="text-3xl">{embassy?.flag}</span>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">{selectedCountry}</h2>
+                      <p className="text-sm text-gray-500">{embassy?.name}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div className="bg-white rounded-xl p-5 shadow-sm border"><p className="text-xs font-medium text-gray-500 uppercase">Tracked Workers</p><p className="text-2xl font-bold mt-1">{countryWorkers.length}</p><p className="text-xs text-gray-400">{embassy?.workersCount.toLocaleString()} total est.</p></div>
+                    <div className="bg-white rounded-xl p-5 shadow-sm border"><p className="text-xs font-medium text-gray-500 uppercase">Safe</p><p className="text-2xl font-bold text-green-600 mt-1">{safe}</p></div>
+                    <div className="bg-white rounded-xl p-5 shadow-sm border"><p className="text-xs font-medium text-gray-500 uppercase">Overdue</p><p className="text-2xl font-bold text-yellow-600 mt-1">{overdue}</p></div>
+                    <div className="bg-white rounded-xl p-5 shadow-sm border"><p className="text-xs font-medium text-gray-500 uppercase">Emergency</p><p className="text-2xl font-bold text-red-600 mt-1">{emergency}</p></div>
+                  </div>
+
+                  {/* Job breakdown */}
+                  <div className="bg-white rounded-xl p-5 shadow-sm border mb-8">
+                    <h3 className="font-semibold text-gray-900 mb-3">Worker Distribution by Job Category</h3>
+                    <div className="flex flex-wrap gap-3">
+                      {Object.entries(jobBreakdown).sort((a, b) => b[1] - a[1]).map(([cat, count]) => (
+                        <div key={cat} className="bg-gray-50 rounded-lg px-4 py-2">
+                          <span className="text-sm font-medium text-gray-700 capitalize">{cat}</span>
+                          <span className="ml-2 text-sm font-bold text-bangladesh-green">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Embassy contact */}
+                  {embassy && (
+                    <div className="bg-white rounded-xl p-5 shadow-sm border mb-8">
+                      <h3 className="font-semibold text-gray-900 mb-3">Embassy Contact</h3>
+                      <div className="grid sm:grid-cols-3 gap-4 text-sm">
+                        <div><span className="text-gray-500">Address:</span><br/><span className="font-medium">{embassy.address}</span></div>
+                        <div><span className="text-gray-500">Phone:</span><br/><span className="font-medium">{embassy.phone}</span></div>
+                        <div><span className="text-gray-500">Email:</span><br/><span className="font-medium">{embassy.email}</span></div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+                  )}
 
-        {/* Alert Workers Table */}
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="p-6 border-b">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-900">Workers Requiring Attention</h3>
-              <select 
-                value={selectedCountry} 
-                onChange={(e) => setSelectedCountry(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm"
-              >
-                <option value="all">All Countries</option>
-                <option value="Saudi Arabia">Saudi Arabia</option>
-                <option value="UAE">UAE</option>
-                <option value="Qatar">Qatar</option>
-                <option value="Kuwait">Kuwait</option>
-                <option value="Oman">Oman</option>
-              </select>
+                  <button onClick={() => { navigateTo('workers', selectedCountry); }} className="mb-6 bg-bangladesh-green text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-green-800 transition-colors flex items-center gap-2">
+                    <Users className="w-4 h-4" /> Browse All {countryWorkers.length} Workers
+                  </button>
+                </>
+              );
+            })()}
+          </>
+        )}
+
+        {/* ===== WORKERS LIST VIEW ===== */}
+        {view === 'workers' && (
+          <>
+            <div className="flex items-center gap-3 mb-6">
+              <button onClick={() => selectedCountry ? navigateTo('country', selectedCountry) : navigateTo('national')} className="p-2 rounded-lg hover:bg-gray-200 transition-colors">
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <h2 className="text-xl font-bold text-gray-900">
+                {selectedCountry ? `Workers in ${selectedCountry}` : 'All Workers'}
+              </h2>
+              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{filteredWorkers.length} results</span>
             </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Worker
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Location
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Check-in
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {alertWorkers.map(worker => (
-                  <tr key={worker.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{worker.name}</div>
-                        <div className="text-sm text-gray-500">{worker.id}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{worker.location.city}</div>
-                      <div className="text-sm text-gray-500">{worker.destination}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(worker.status)}`}>
-                        {getStatusText(worker.status)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(worker.lastCheckIn).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button className="text-bangladesh-green hover:text-bangladesh-red mr-4">
-                        Contact Embassy
+
+            {/* Search & Filters */}
+            <div className="bg-white rounded-xl shadow-sm border p-4 mb-6">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
+                    placeholder="Search by name, ID, employer, district, city..."
+                    className="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-bangladesh-green/20 focus:border-bangladesh-green outline-none"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => { setSearchQuery(''); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                    </button>
+                  )}
+                </div>
+                <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg text-sm font-medium ${showFilters ? 'bg-bangladesh-green text-white border-bangladesh-green' : 'text-gray-700 hover:bg-gray-50'}`}>
+                  <Filter className="w-4 h-4" /> Filters
+                </button>
+              </div>
+
+              {showFilters && (
+                <div className="mt-3 pt-3 border-t flex flex-wrap gap-3">
+                  {!selectedCountry && (
+                    <select value={selectedCountry || 'all'} onChange={e => { setSelectedCountry(e.target.value === 'all' ? null : e.target.value); setPage(1); }} className="border rounded-lg px-3 py-2 text-sm">
+                      <option value="all">All Countries</option>
+                      {[...new Set(workers.map(w => w.destination))].sort().map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  )}
+                  <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} className="border rounded-lg px-3 py-2 text-sm">
+                    <option value="all">All Statuses</option>
+                    <option value="safe">Safe</option>
+                    <option value="check_overdue">Check Overdue</option>
+                    <option value="emergency">Emergency</option>
+                  </select>
+                  <select value={jobFilter} onChange={e => { setJobFilter(e.target.value); setPage(1); }} className="border rounded-lg px-3 py-2 text-sm">
+                    <option value="all">All Job Types</option>
+                    {jobCategories.map(j => <option key={j} value={j} className="capitalize">{j}</option>)}
+                  </select>
+                  {(statusFilter !== 'all' || jobFilter !== 'all') && (
+                    <button onClick={() => { setStatusFilter('all'); setJobFilter('all'); setPage(1); }} className="text-sm text-red-600 hover:underline flex items-center gap-1">
+                      <X className="w-3 h-3" /> Clear filters
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Workers Table */}
+            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-100">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th onClick={() => toggleSort('name')} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:text-gray-700">
+                        <span className="flex items-center gap-1">Worker <ArrowUpDown className="w-3 h-3" /></span>
+                      </th>
+                      <th onClick={() => toggleSort('destination')} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:text-gray-700">
+                        <span className="flex items-center gap-1">Location <ArrowUpDown className="w-3 h-3" /></span>
+                      </th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Employer</th>
+                      <th onClick={() => toggleSort('status')} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:text-gray-700">
+                        <span className="flex items-center gap-1">Status <ArrowUpDown className="w-3 h-3" /></span>
+                      </th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Last Check-in</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {pagedWorkers.map(worker => (
+                      <tr key={worker.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedWorker(worker)}>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <User className="w-4 h-4 text-gray-500" />
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{worker.name}</div>
+                              <div className="text-xs text-gray-500">{worker.id} • {worker.homeDistrict}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="text-sm text-gray-900">{worker.location.city}</div>
+                          <div className="text-xs text-gray-500">{worker.destination}</div>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="text-sm text-gray-900 max-w-[180px] truncate">{worker.employer}</div>
+                          <div className="text-xs text-gray-500">{worker.jobTitle}</div>
+                        </td>
+                        <td className="px-5 py-3"><StatusBadge status={worker.status} /></td>
+                        <td className="px-5 py-3 text-sm text-gray-500">{new Date(worker.lastCheckIn).toLocaleDateString()}</td>
+                        <td className="px-5 py-3">
+                          <button onClick={e => { e.stopPropagation(); setSelectedWorker(worker); }} className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
+                            <Eye className="w-3.5 h-3.5" /> View
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-5 py-4 border-t bg-gray-50">
+                  <p className="text-sm text-gray-500">
+                    Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredWorkers.length)} of {filteredWorkers.length}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2 rounded-lg border hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed">
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                      <button key={p} onClick={() => setPage(p)} className={`w-9 h-9 rounded-lg text-sm font-medium ${p === page ? 'bg-bangladesh-green text-white' : 'border hover:bg-white text-gray-700'}`}>
+                        {p}
                       </button>
-                      <button className="text-blue-600 hover:text-blue-900">
-                        View Details
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                    ))}
+                    <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-2 rounded-lg border hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed">
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {pagedWorkers.length === 0 && (
+                <div className="p-12 text-center text-gray-500">
+                  <Search className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                  <p className="font-medium">No workers found</p>
+                  <p className="text-sm mt-1">Try adjusting your search or filters</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Worker Detail Modal */}
+      <WorkerDetailModal worker={selectedWorker} onClose={() => setSelectedWorker(null)} />
     </div>
   );
 }
