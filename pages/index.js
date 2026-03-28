@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Shield, Users, Building, Heart, MapPin, AlertTriangle } from 'lucide-react';
+import { stats } from '../data/mockWorkers';
 
 export default function Home() {
   return (

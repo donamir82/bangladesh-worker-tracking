@@ -1,70 +1,162 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { workers, embassies } from '../data/mockWorkers';
 import { 
-  MapPin, 
-  AlertTriangle, 
-  CheckCircle, 
-  Phone, 
-  Mail, 
-  User, 
-  Calendar,
-  Shield,
-  Building
+  MapPin, AlertTriangle, CheckCircle, Phone, Mail, User, Calendar,
+  Shield, Building, Search, X, ChevronLeft, ChevronRight, Eye,
+  ArrowUpDown, Filter, Clock, Home
 } from 'lucide-react';
+
+const PAGE_SIZE = 10;
+
+function StatusBadge({ status }) {
+  const config = {
+    safe: { bg: 'bg-green-100', text: 'text-green-700', label: 'Safe' },
+    check_overdue: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Check Overdue' },
+    emergency: { bg: 'bg-red-100', text: 'text-red-700', label: 'Emergency' },
+  };
+  const c = config[status] || config.safe;
+  return <span className={`inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full ${c.bg} ${c.text}`}>{c.label}</span>;
+}
+
+function WorkerDetailModal({ worker, onClose }) {
+  if (!worker) return null;
+  return (
+    <div className="fixed inset-0 bg-black/50 overflow-y-auto h-full w-full z-50 flex items-start justify-center pt-10 pb-10" onClick={onClose}>
+      <div className="relative w-11/12 max-w-2xl shadow-2xl rounded-xl bg-white" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 border-b bg-gray-50 rounded-t-xl">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">{worker.name}</h3>
+            <p className="text-sm text-gray-500">{worker.id} • {worker.gender}, Age {worker.age}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <StatusBadge status={worker.status} />
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+          </div>
+        </div>
+        <div className="p-6 grid md:grid-cols-2 gap-6">
+          <div>
+            <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase tracking-wider">Personal</h4>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between"><dt className="text-gray-500">Passport</dt><dd className="font-medium">{worker.passport}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Phone</dt><dd className="font-medium">{worker.phone}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Home District</dt><dd className="font-medium">{worker.homeDistrict}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Emergency</dt><dd className="font-medium text-right max-w-[200px]">{worker.emergencyContact}</dd></div>
+            </dl>
+          </div>
+          <div>
+            <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase tracking-wider">Employment</h4>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between"><dt className="text-gray-500">Employer</dt><dd className="font-medium text-right max-w-[200px]">{worker.employer}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Job</dt><dd className="font-medium">{worker.jobTitle}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">City</dt><dd className="font-medium">{worker.location.city}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Contract</dt><dd className="font-medium">{worker.departureDate} → {worker.contractExpiry}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Salary</dt><dd className={`font-medium ${worker.salaryStatus === 'paid' ? 'text-green-600' : 'text-red-600'}`}>{worker.salaryStatus}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Health</dt><dd className="font-medium capitalize">{worker.healthStatus.replace(/_/g, ' ')}</dd></div>
+            </dl>
+          </div>
+        </div>
+        {worker.alerts?.length > 0 && (
+          <div className="mx-6 mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <h4 className="font-semibold text-red-900 mb-2 text-sm">⚠️ Active Alert</h4>
+            {worker.alerts.map(a => (
+              <div key={a.id} className="text-sm text-red-800">
+                <span className="font-medium uppercase">{a.type}</span>: {a.message}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50 rounded-b-xl">
+          <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">Close</button>
+          <button className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm">Contact Worker</button>
+          {worker.status === 'emergency' && <button className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm">Emergency Response</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function EmbassyPortal() {
   const [selectedEmbassy, setSelectedEmbassy] = useState('riyadh');
   const [selectedWorker, setSelectedWorker] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [sortField, setSortField] = useState('name');
+  const [sortDir, setSortDir] = useState('asc');
 
   const currentEmbassy = embassies.find(e => e.id === selectedEmbassy);
-  const embassyWorkers = workers.filter(worker => 
-    worker.embassy.toLowerCase().includes(currentEmbassy?.country.toLowerCase() || '')
-  );
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'safe': return 'text-green-600 bg-green-100';
-      case 'check_overdue': return 'text-yellow-600 bg-yellow-100';
-      case 'emergency': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+  const embassyWorkers = useMemo(() => {
+    let result = workers.filter(w => {
+      const country = currentEmbassy?.country || '';
+      return w.destination === country;
+    });
+    if (statusFilter !== 'all') result = result.filter(w => w.status === statusFilter);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(w =>
+        w.name.toLowerCase().includes(q) ||
+        w.id.toLowerCase().includes(q) ||
+        w.employer.toLowerCase().includes(q) ||
+        w.location.city.toLowerCase().includes(q)
+      );
     }
+    result.sort((a, b) => {
+      let va = a[sortField] || '';
+      let vb = b[sortField] || '';
+      if (typeof va === 'string') va = va.toLowerCase();
+      if (typeof vb === 'string') vb = vb.toLowerCase();
+      return sortDir === 'asc' ? (va < vb ? -1 : 1) : (va > vb ? -1 : 1);
+    });
+    return result;
+  }, [selectedEmbassy, currentEmbassy, statusFilter, searchQuery, sortField, sortDir]);
+
+  const totalPages = Math.ceil(embassyWorkers.length / PAGE_SIZE);
+  const pagedWorkers = embassyWorkers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const allCountryWorkers = workers.filter(w => w.destination === currentEmbassy?.country);
+  const safeCount = allCountryWorkers.filter(w => w.status === 'safe').length;
+  const overdueCount = allCountryWorkers.filter(w => w.status === 'check_overdue').length;
+  const emergencyCount = allCountryWorkers.filter(w => w.status === 'emergency').length;
+
+  const switchEmbassy = (id) => {
+    setSelectedEmbassy(id);
+    setPage(1);
+    setSearchQuery('');
+    setStatusFilter('all');
   };
 
-  const getStatusText = (status) => {
-    switch(status) {
-      case 'safe': return 'Safe';
-      case 'check_overdue': return 'Check Overdue';
-      case 'emergency': return 'Emergency';
-      default: return 'Unknown';
-    }
+  const toggleSort = (field) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+          <div className="flex justify-between items-center py-3">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Link href="/" className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-700 transition-colors">
                 <Building className="h-6 w-6 text-white" />
-              </div>
+              </Link>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Embassy Portal</h1>
-                <p className="text-sm text-gray-500">{currentEmbassy?.name}</p>
+                <h1 className="text-lg font-bold text-gray-900">Embassy Portal</h1>
+                <p className="text-xs text-gray-500">{currentEmbassy?.name}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-3">
               <select 
                 value={selectedEmbassy} 
-                onChange={(e) => setSelectedEmbassy(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                onChange={(e) => switchEmbassy(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
               >
                 {embassies.map(embassy => (
-                  <option key={embassy.id} value={embassy.id}>{embassy.country}</option>
+                  <option key={embassy.id} value={embassy.id}>{embassy.flag} {embassy.country}</option>
                 ))}
               </select>
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+              <button className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 hidden sm:block">
                 Emergency Protocol
               </button>
             </div>
@@ -72,244 +164,164 @@ export default function EmbassyPortal() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Embassy Info & Stats */}
-        <div className="grid lg:grid-cols-4 gap-6 mb-8">
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Embassy Information</h3>
-              <div className="space-y-3">
-                <div className="flex items-center text-sm">
-                  <MapPin className="h-4 w-4 text-gray-400 mr-2" />
-                  <span className="text-gray-600">{currentEmbassy?.country}</span>
-                </div>
-                <div className="flex items-center text-sm">
-                  <Phone className="h-4 w-4 text-gray-400 mr-2" />
-                  <span className="text-gray-600">{currentEmbassy?.emergencyHotline}</span>
-                </div>
-                <div className="flex items-center text-sm">
-                  <Mail className="h-4 w-4 text-gray-400 mr-2" />
-                  <span className="text-gray-600">{currentEmbassy?.email}</span>
-                </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Embassy cards row */}
+        <div className="flex gap-3 overflow-x-auto pb-3 mb-6 scrollbar-hide">
+          {embassies.map(e => (
+            <button
+              key={e.id}
+              onClick={() => switchEmbassy(e.id)}
+              className={`flex-shrink-0 rounded-xl px-4 py-3 border text-left transition-all ${
+                e.id === selectedEmbassy ? 'bg-blue-50 border-blue-300 shadow-sm' : 'bg-white border-gray-200 hover:border-blue-200'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">{e.flag}</span>
+                <span className="text-sm font-semibold text-gray-900">{e.country}</span>
               </div>
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">
-                  {embassyWorkers.length}
-                </div>
-                <div className="text-sm text-gray-600">Workers in jurisdiction</div>
-              </div>
+              <div className="text-xs text-gray-500">{e.registeredWorkers} tracked • {e.recentAlerts} alerts</div>
+            </button>
+          ))}
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-xl p-5 shadow-sm border">
+            <p className="text-xs font-medium text-gray-500 uppercase">Total Workers</p>
+            <p className="text-2xl font-bold mt-1">{allCountryWorkers.length}</p>
+            <p className="text-xs text-gray-400">{currentEmbassy?.workersCount.toLocaleString()} est. nationally</p>
+          </div>
+          <div className="bg-white rounded-xl p-5 shadow-sm border cursor-pointer hover:border-green-300" onClick={() => { setStatusFilter(statusFilter === 'safe' ? 'all' : 'safe'); setPage(1); }}>
+            <p className="text-xs font-medium text-gray-500 uppercase">Safe</p>
+            <p className="text-2xl font-bold text-green-600 mt-1">{safeCount}</p>
+          </div>
+          <div className="bg-white rounded-xl p-5 shadow-sm border cursor-pointer hover:border-yellow-300" onClick={() => { setStatusFilter(statusFilter === 'check_overdue' ? 'all' : 'check_overdue'); setPage(1); }}>
+            <p className="text-xs font-medium text-gray-500 uppercase">Overdue</p>
+            <p className="text-2xl font-bold text-yellow-600 mt-1">{overdueCount}</p>
+          </div>
+          <div className="bg-white rounded-xl p-5 shadow-sm border cursor-pointer hover:border-red-300" onClick={() => { setStatusFilter(statusFilter === 'emergency' ? 'all' : 'emergency'); setPage(1); }}>
+            <p className="text-xs font-medium text-gray-500 uppercase">Emergency</p>
+            <p className="text-2xl font-bold text-red-600 mt-1">{emergencyCount}</p>
+          </div>
+        </div>
+
+        {/* Embassy Info */}
+        {currentEmbassy && (
+          <div className="bg-white rounded-xl p-5 shadow-sm border mb-6">
+            <div className="grid sm:grid-cols-3 gap-4 text-sm">
+              <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-400" /> <span className="text-gray-600">{currentEmbassy.address}</span></div>
+              <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-gray-400" /> <span className="text-gray-600">{currentEmbassy.emergencyHotline}</span></div>
+              <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-gray-400" /> <span className="text-gray-600">{currentEmbassy.email}</span></div>
             </div>
           </div>
+        )}
 
-          <div className="lg:col-span-3">
-            <div className="grid md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Safe Workers</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      {embassyWorkers.filter(w => w.status === 'safe').length}
-                    </p>
-                  </div>
-                  <CheckCircle className="h-8 w-8 text-green-600" />
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Overdue Check-ins</p>
-                    <p className="text-2xl font-bold text-yellow-600">
-                      {embassyWorkers.filter(w => w.status === 'check_overdue').length}
-                    </p>
-                  </div>
-                  <AlertTriangle className="h-8 w-8 text-yellow-600" />
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Emergency Cases</p>
-                    <p className="text-2xl font-bold text-red-600">
-                      {embassyWorkers.filter(w => w.status === 'emergency').length}
-                    </p>
-                  </div>
-                  <AlertTriangle className="h-8 w-8 text-red-600" />
-                </div>
-              </div>
+        {/* Search & Filter */}
+        <div className="bg-white rounded-xl shadow-sm border p-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
+                placeholder="Search workers by name, ID, employer..."
+                className="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+              />
+              {searchQuery && <button onClick={() => { setSearchQuery(''); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2"><X className="w-4 h-4 text-gray-400" /></button>}
             </div>
+            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} className="border rounded-lg px-3 py-2.5 text-sm">
+              <option value="all">All Statuses</option>
+              <option value="safe">Safe</option>
+              <option value="check_overdue">Check Overdue</option>
+              <option value="emergency">Emergency</option>
+            </select>
           </div>
         </div>
 
         {/* Workers Table */}
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="p-6 border-b">
-            <h3 className="text-lg font-semibold text-gray-900">Workers in {currentEmbassy?.country}</h3>
-          </div>
+        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Worker Details
+                  <th onClick={() => toggleSort('name')} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:text-gray-700">
+                    <span className="flex items-center gap-1">Worker <ArrowUpDown className="w-3 h-3" /></span>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Employer
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Employer / Job</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">City</th>
+                  <th onClick={() => toggleSort('status')} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:text-gray-700">
+                    <span className="flex items-center gap-1">Status <ArrowUpDown className="w-3 h-3" /></span>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Check-in
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Last Check-in</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {embassyWorkers.map(worker => (
-                  <tr key={worker.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
-                          <User className="h-5 w-5 text-gray-500" />
+              <tbody className="divide-y divide-gray-50">
+                {pagedWorkers.map(worker => (
+                  <tr key={worker.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedWorker(worker)}>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <User className="w-4 h-4 text-gray-500" />
                         </div>
-                        <div className="ml-4">
+                        <div>
                           <div className="text-sm font-medium text-gray-900">{worker.name}</div>
-                          <div className="text-sm text-gray-500">{worker.id}</div>
-                          <div className="text-sm text-gray-500">{worker.homeDistrict}, Bangladesh</div>
+                          <div className="text-xs text-gray-500">{worker.id} • {worker.homeDistrict}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{worker.employer}</div>
-                      <div className="text-sm text-gray-500">{worker.jobTitle}</div>
+                    <td className="px-5 py-3">
+                      <div className="text-sm text-gray-900 max-w-[180px] truncate">{worker.employer}</div>
+                      <div className="text-xs text-gray-500">{worker.jobTitle}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(worker.status)}`}>
-                        {getStatusText(worker.status)}
-                      </span>
-                      {worker.alerts && worker.alerts.length > 0 && (
-                        <div className="mt-1 text-xs text-red-600">
-                          {worker.alerts[0].message}
-                        </div>
-                      )}
+                    <td className="px-5 py-3 text-sm text-gray-700">{worker.location.city}</td>
+                    <td className="px-5 py-3">
+                      <StatusBadge status={worker.status} />
+                      {worker.alerts?.[0] && <div className="text-xs text-red-600 mt-1 max-w-[160px] truncate">{worker.alerts[0].message}</div>}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {new Date(worker.lastCheckIn).toLocaleDateString()}
+                    <td className="px-5 py-3">
+                      <div className="text-sm text-gray-700">{new Date(worker.lastCheckIn).toLocaleDateString()}</div>
+                      <div className="text-xs text-gray-500">{new Date(worker.lastCheckIn).toLocaleTimeString()}</div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex gap-2">
+                        <button onClick={e => { e.stopPropagation(); setSelectedWorker(worker); }} className="text-sm text-blue-600 hover:text-blue-800 font-medium">View</button>
+                        {worker.status === 'emergency' && <button className="text-sm text-red-600 hover:text-red-800 font-medium">SOS</button>}
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {new Date(worker.lastCheckIn).toLocaleTimeString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      <button 
-                        onClick={() => setSelectedWorker(worker)}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        View Details
-                      </button>
-                      <button className="text-green-600 hover:text-green-900">
-                        Contact Worker
-                      </button>
-                      {worker.status === 'emergency' && (
-                        <button className="text-red-600 hover:text-red-900">
-                          Emergency Response
-                        </button>
-                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-5 py-4 border-t bg-gray-50">
+              <p className="text-sm text-gray-500">
+                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, embassyWorkers.length)} of {embassyWorkers.length}
+              </p>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2 rounded-lg border hover:bg-white disabled:opacity-40"><ChevronLeft className="w-4 h-4" /></button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                  <button key={p} onClick={() => setPage(p)} className={`w-9 h-9 rounded-lg text-sm font-medium ${p === page ? 'bg-blue-600 text-white' : 'border hover:bg-white'}`}>{p}</button>
+                ))}
+                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-2 rounded-lg border hover:bg-white disabled:opacity-40"><ChevronRight className="w-4 h-4" /></button>
+              </div>
+            </div>
+          )}
+
+          {pagedWorkers.length === 0 && (
+            <div className="p-12 text-center text-gray-500">
+              <Search className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+              <p className="font-medium">No workers found</p>
+              <p className="text-sm mt-1">Try adjusting your search or filters</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Worker Detail Modal */}
-      {selectedWorker && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Worker Details</h3>
-                <button 
-                  onClick={() => setSelectedWorker(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              </div>
-              
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Personal Information</h4>
-                  <div className="space-y-2 text-sm">
-                    <div><span className="font-medium">Name:</span> {selectedWorker.name}</div>
-                    <div><span className="font-medium">Age:</span> {selectedWorker.age}</div>
-                    <div><span className="font-medium">Passport:</span> {selectedWorker.passport}</div>
-                    <div><span className="font-medium">Phone:</span> {selectedWorker.phone}</div>
-                    <div><span className="font-medium">Home District:</span> {selectedWorker.homeDistrict}</div>
-                    <div><span className="font-medium">Emergency Contact:</span> {selectedWorker.emergencyContact}</div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Employment Details</h4>
-                  <div className="space-y-2 text-sm">
-                    <div><span className="font-medium">Employer:</span> {selectedWorker.employer}</div>
-                    <div><span className="font-medium">Job Title:</span> {selectedWorker.jobTitle}</div>
-                    <div><span className="font-medium">Location:</span> {selectedWorker.location.city}</div>
-                    <div><span className="font-medium">Contract Expiry:</span> {selectedWorker.contractExpiry}</div>
-                    <div><span className="font-medium">Salary Status:</span> 
-                      <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
-                        selectedWorker.salaryStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {selectedWorker.salaryStatus}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {selectedWorker.alerts && selectedWorker.alerts.length > 0 && (
-                <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <h4 className="font-medium text-red-900 mb-2">Active Alerts</h4>
-                  {selectedWorker.alerts.map(alert => (
-                    <div key={alert.id} className="text-sm text-red-800">
-                      <div className="font-medium">{alert.type.toUpperCase()}</div>
-                      <div>{alert.message}</div>
-                      <div className="text-xs text-red-600 mt-1">
-                        {new Date(alert.timestamp).toLocaleString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="mt-6 flex justify-end space-x-3">
-                <button 
-                  onClick={() => setSelectedWorker(null)}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
-                >
-                  Close
-                </button>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  Contact Worker
-                </button>
-                {selectedWorker.status === 'emergency' && (
-                  <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                    Emergency Action
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <WorkerDetailModal worker={selectedWorker} onClose={() => setSelectedWorker(null)} />
     </div>
   );
 }
