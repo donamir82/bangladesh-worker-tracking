@@ -8,20 +8,48 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-green-200">
+        {/* Government Header Bar */}
+        <div className="bg-bangladesh-green">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-2">
+              <div className="flex items-center space-x-4">
+                <div className="text-white text-sm">🇧🇩 Government of the People's Republic of Bangladesh</div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <button className="text-white text-sm border border-white/30 px-3 py-1 rounded hover:bg-white/10">
+                  বাংলা
+                </button>
+                <button className="text-white text-sm bg-white/20 px-3 py-1 rounded">
+                  English
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Main Header */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-bangladesh-green rounded-lg flex items-center justify-center">
-                <Shield className="h-6 w-6 text-white" />
+            <div className="flex items-center space-x-4">
+              {/* National Emblem */}
+              <div className="w-12 h-12 bg-bangladesh-green rounded-full flex items-center justify-center border-2 border-bangladesh-green">
+                <div className="text-white font-bold text-lg">🇧🇩</div>
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Bangladesh Worker Protection System</h1>
-                <p className="text-sm text-gray-500">Ministry of Expatriates' Welfare and Overseas Employment</p>
+                <p className="text-sm text-gray-600">Ministry of Expatriates' Welfare and Overseas Employment</p>
+                <p className="text-xs text-gray-500">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</p>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-6 bg-bangladesh-green rounded-sm"></div>
-              <div className="w-8 h-6 bg-bangladesh-red rounded-sm"></div>
+            <div className="flex items-center space-x-3">
+              <div className="text-right text-xs text-gray-500">
+                <div>Powered by</div>
+                <div className="font-medium">Bangladesh Government Cloud</div>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-8 h-6 bg-bangladesh-green rounded-sm"></div>
+                <div className="w-8 h-6 bg-bangladesh-red rounded-sm"></div>
+              </div>
             </div>
           </div>
         </div>

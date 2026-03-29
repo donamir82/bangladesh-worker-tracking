@@ -135,16 +135,39 @@ export default function EmbassyPortal() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b sticky top-0 z-40">
+        {/* Government Header Bar */}
+        <div className="bg-bangladesh-green">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-1.5">
+              <div className="flex items-center space-x-4">
+                <div className="text-white text-sm">🇧🇩 Government of the People's Republic of Bangladesh</div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button className="text-white text-sm border border-white/30 px-2 py-0.5 rounded hover:bg-white/10">
+                  বাংলা
+                </button>
+                <button className="text-white text-sm bg-white/20 px-2 py-0.5 rounded">
+                  English
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Header */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-3">
             <div className="flex items-center space-x-3">
-              <Link href="/" className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-700 transition-colors">
-                <Building className="h-6 w-6 text-white" />
+              <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+                {/* National Emblem */}
+                <div className="w-10 h-10 bg-bangladesh-green rounded-full flex items-center justify-center border-2 border-bangladesh-green">
+                  <div className="text-white font-bold text-sm">🇧🇩</div>
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-gray-900">Embassy Portal</h1>
+                  <p className="text-xs text-gray-600">{currentEmbassy?.name}</p>
+                </div>
               </Link>
-              <div>
-                <h1 className="text-lg font-bold text-gray-900">Embassy Portal</h1>
-                <p className="text-xs text-gray-500">{currentEmbassy?.name}</p>
-              </div>
             </div>
             <div className="flex items-center gap-3">
               <select 
