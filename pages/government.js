@@ -142,6 +142,15 @@ export default function GovernmentDashboard() {
     setPage(1);
   };
 
+  // Status filter handler
+  const handleStatusFilter = (status) => {
+    setStatusFilter(status);
+    setView('workers'); // Show workers view
+    setPage(1);
+    setSelectedCountry(null);
+    setMapSelectedCountry(null);
+  };
+
   // Filtered & sorted workers
   const filteredWorkers = useMemo(() => {
     let result = [...workers];
@@ -295,9 +304,17 @@ export default function GovernmentDashboard() {
         {/* ===== NATIONAL VIEW ===== */}
         {view === 'national' && (
           <>
-            {/* Key Metrics */}
+            {/* Key Metrics - Clickable */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+              <div 
+                onClick={() => handleStatusFilter('all')}
+                className={`bg-white rounded-xl p-5 shadow-sm border cursor-pointer transition-all duration-200 hover:shadow-md hover:border-blue-300 hover:scale-105 ${
+                  statusFilter === 'all' 
+                    ? 'border-blue-300 shadow-md ring-2 ring-blue-100' 
+                    : 'border-gray-100'
+                }`}
+                title="Click to view all workers"
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Total Workers')}</p>
@@ -306,7 +323,15 @@ export default function GovernmentDashboard() {
                   <div className="p-3 bg-blue-50 rounded-xl"><Users className="h-6 w-6 text-blue-600" /></div>
                 </div>
               </div>
-              <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+              <div 
+                onClick={() => handleStatusFilter('safe')}
+                className={`bg-white rounded-xl p-5 shadow-sm border cursor-pointer transition-all duration-200 hover:shadow-md hover:border-green-300 hover:scale-105 ${
+                  statusFilter === 'safe' 
+                    ? 'border-green-300 shadow-md ring-2 ring-green-100' 
+                    : 'border-gray-100'
+                }`}
+                title="Click to view safe workers"
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Safe')}</p>
@@ -316,7 +341,24 @@ export default function GovernmentDashboard() {
                   <div className="p-3 bg-green-50 rounded-xl"><CheckCircle className="h-6 w-6 text-green-600" /></div>
                 </div>
               </div>
-              <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+              <div 
+                onClick={() => {
+                  // Toggle between check_overdue and emergency, or show all alerts
+                  if (statusFilter === 'check_overdue') {
+                    handleStatusFilter('emergency');
+                  } else if (statusFilter === 'emergency') {
+                    handleStatusFilter('all');
+                  } else {
+                    handleStatusFilter('check_overdue');
+                  }
+                }}
+                className={`bg-white rounded-xl p-5 shadow-sm border cursor-pointer transition-all duration-200 hover:shadow-md hover:border-red-300 hover:scale-105 ${
+                  statusFilter === 'check_overdue' || statusFilter === 'emergency' 
+                    ? 'border-red-300 shadow-md ring-2 ring-red-100' 
+                    : 'border-gray-100'
+                }`}
+                title="Click to cycle through: Overdue → Emergency → All alerts"
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Active Alerts')}</p>
