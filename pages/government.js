@@ -8,6 +8,9 @@ import {
   TrendingUp, BarChart3, ArrowLeft
 } from 'lucide-react';
 import useEmergencySimulation from '../hooks/useEmergencySimulation';
+import { useTranslation, useLanguage } from '../hooks/useLanguage';
+import WorldMap from '../components/WorldMap';
+import LiveAnalytics from '../components/LiveAnalytics';
 import { 
   EmergencyBanner, 
   EmergencyTimeline, 
@@ -106,6 +109,11 @@ export default function GovernmentDashboard() {
   const [sortDir, setSortDir] = useState('asc');
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [mapSelectedCountry, setMapSelectedCountry] = useState(null);
+
+  // Translation and language hooks
+  const { t } = useTranslation();
+  const { language, toggleLanguage } = useLanguage();
 
   // Emergency simulation state
   const {
@@ -119,16 +127,30 @@ export default function GovernmentDashboard() {
   const navigateTo = (v, country = null) => {
     setView(v);
     setSelectedCountry(country);
+    setMapSelectedCountry(null); // Clear map selection when navigating
     setPage(1);
     setSearchQuery('');
     setStatusFilter('all');
     setJobFilter('all');
   };
 
+  // Map country selection handler
+  const handleMapCountrySelect = (country) => {
+    setMapSelectedCountry(country);
+    setSelectedCountry(null); // Clear navigation selection
+    setView('workers'); // Show workers view
+    setPage(1);
+  };
+
   // Filtered & sorted workers
   const filteredWorkers = useMemo(() => {
     let result = [...workers];
-    if (selectedCountry) result = result.filter(w => w.destination === selectedCountry);
+    
+    // Country filter (from navigation or map)
+    const activeCountry = selectedCountry || mapSelectedCountry;
+    if (activeCountry) {
+      result = result.filter(w => w.location.country === activeCountry);
+    }
     if (statusFilter !== 'all') result = result.filter(w => w.status === statusFilter);
     if (jobFilter !== 'all') result = result.filter(w => w.jobCategory === jobFilter);
     if (searchQuery.trim()) {
@@ -151,7 +173,7 @@ export default function GovernmentDashboard() {
       return 0;
     });
     return result;
-  }, [selectedCountry, statusFilter, jobFilter, searchQuery, sortField, sortDir]);
+  }, [selectedCountry, mapSelectedCountry, statusFilter, jobFilter, searchQuery, sortField, sortDir]);
 
   const totalPages = Math.ceil(filteredWorkers.length / PAGE_SIZE);
   const pagedWorkers = filteredWorkers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -165,11 +187,12 @@ export default function GovernmentDashboard() {
   const countryStats = useMemo(() => {
     const map = {};
     workers.forEach(w => {
-      if (!map[w.destination]) map[w.destination] = { total: 0, safe: 0, overdue: 0, emergency: 0 };
-      map[w.destination].total++;
-      if (w.status === 'safe') map[w.destination].safe++;
-      else if (w.status === 'check_overdue') map[w.destination].overdue++;
-      else map[w.destination].emergency++;
+      const country = w.location.country;
+      if (!map[country]) map[country] = { total: 0, safe: 0, overdue: 0, emergency: 0 };
+      map[country].total++;
+      if (w.status === 'safe') map[country].safe++;
+      else if (w.status === 'check_overdue') map[country].overdue++;
+      else map[country].emergency++;
     });
     return map;
   }, []);
@@ -189,10 +212,20 @@ export default function GovernmentDashboard() {
                 <div className="text-white text-sm">🇧🇩 Government of the People's Republic of Bangladesh</div>
               </div>
               <div className="flex items-center space-x-3">
-                <button className="text-white text-sm border border-white/30 px-2 py-0.5 rounded hover:bg-white/10 transition-colors">
+                <button 
+                  onClick={toggleLanguage}
+                  className={`text-white text-sm px-2 py-0.5 rounded transition-colors ${
+                    language === 'bn' ? 'bg-white/20' : 'border border-white/30 hover:bg-white/10'
+                  }`}
+                >
                   বাংলা
                 </button>
-                <button className="text-white text-sm bg-white/20 px-2 py-0.5 rounded">
+                <button 
+                  onClick={toggleLanguage}
+                  className={`text-white text-sm px-2 py-0.5 rounded transition-colors ${
+                    language === 'en' ? 'bg-white/20' : 'border border-white/30 hover:bg-white/10'
+                  }`}
+                >
                   English
                 </button>
               </div>
@@ -210,8 +243,8 @@ export default function GovernmentDashboard() {
                   <div className="text-white font-bold text-sm">🇧🇩</div>
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold text-gray-900">Government Dashboard</h1>
-                  <p className="text-xs text-gray-600">Ministry of Expatriates' Welfare and Overseas Employment</p>
+                  <h1 className="text-lg font-bold text-gray-900">{t('Government Dashboard')}</h1>
+                  <p className="text-xs text-gray-600">{t('Ministry of Expatriates\' Welfare and Overseas Employment')}</p>
                 </div>
               </Link>
             </div>
@@ -225,7 +258,7 @@ export default function GovernmentDashboard() {
                 </div>
               </div>
               <button className="bg-bangladesh-green text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 transition-colors">
-                Generate Report
+                {t('Generate Report')}
               </button>
             </div>
           </div>
@@ -267,7 +300,7 @@ export default function GovernmentDashboard() {
               <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Workers</p>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Total Workers')}</p>
                     <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalWorkers.toLocaleString()}</p>
                   </div>
                   <div className="p-3 bg-blue-50 rounded-xl"><Users className="h-6 w-6 text-blue-600" /></div>
@@ -276,7 +309,7 @@ export default function GovernmentDashboard() {
               <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Safe</p>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Safe')}</p>
                     <p className="text-2xl font-bold text-green-600 mt-1">{stats.safeWorkers.toLocaleString()}</p>
                     <p className="text-xs text-green-600 mt-0.5">99.9% of total</p>
                   </div>
@@ -286,7 +319,7 @@ export default function GovernmentDashboard() {
               <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Alerts</p>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Active Alerts')}</p>
                     <p className="text-2xl font-bold text-red-600 mt-1">{stats.alertsActive}</p>
                     <p className="text-xs text-red-500 mt-0.5">{stats.emergencyCases} emergency</p>
                   </div>
@@ -309,7 +342,7 @@ export default function GovernmentDashboard() {
             <div className="mb-8">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold text-gray-900">Emergency Response System</h3>
+                  <h3 className="text-lg font-bold text-gray-900">{t('Emergency Response System')}</h3>
                   <EmergencyControls 
                     workers={workers}
                     onSimulate={startEmergencySimulation}
@@ -337,6 +370,23 @@ export default function GovernmentDashboard() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* World Map */}
+            <div className="mb-8">
+              <WorldMap 
+                workers={workers} 
+                onCountrySelect={handleMapCountrySelect}
+                selectedCountry={mapSelectedCountry}
+              />
+            </div>
+
+            {/* Live Analytics */}
+            <div className="mb-8">
+              <LiveAnalytics 
+                workers={workers}
+                simulation={simulation}
+              />
             </div>
 
             {/* Embassy Cards — clickable */}
