@@ -7,6 +7,13 @@ import {
   Filter, X, Eye, ArrowUpDown, Home, Globe, User, FileText,
   TrendingUp, BarChart3, ArrowLeft
 } from 'lucide-react';
+import useEmergencySimulation from '../hooks/useEmergencySimulation';
+import { 
+  EmergencyBanner, 
+  EmergencyTimeline, 
+  EmergencyControls, 
+  EmergencyStats 
+} from '../components/EmergencySimulation';
 
 const PAGE_SIZE = 10;
 
@@ -99,6 +106,14 @@ export default function GovernmentDashboard() {
   const [sortDir, setSortDir] = useState('asc');
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Emergency simulation state
+  const {
+    simulation,
+    startEmergencySimulation,
+    resetSimulation,
+    isSimulationActive
+  } = useEmergencySimulation();
 
   // Breadcrumb navigation
   const navigateTo = (v, country = null) => {
@@ -217,6 +232,9 @@ export default function GovernmentDashboard() {
         </div>
       </header>
 
+      {/* Emergency Alert Banner */}
+      <EmergencyBanner simulation={simulation} onReset={resetSimulation} />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm mb-6">
@@ -284,6 +302,40 @@ export default function GovernmentDashboard() {
                   </div>
                   <div className="p-3 bg-green-50 rounded-xl"><Activity className="h-6 w-6 text-bangladesh-green" /></div>
                 </div>
+              </div>
+            </div>
+
+            {/* Emergency Simulation Controls & Stats */}
+            <div className="mb-8">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-gray-900">Emergency Response System</h3>
+                  <EmergencyControls 
+                    workers={workers}
+                    onSimulate={startEmergencySimulation}
+                    isActive={isSimulationActive}
+                    onReset={resetSimulation}
+                  />
+                </div>
+                
+                {/* Emergency Stats */}
+                <EmergencyStats simulation={simulation} />
+                
+                {/* Emergency Timeline */}
+                {isSimulationActive && (
+                  <div className="mt-6">
+                    <EmergencyTimeline simulation={simulation} />
+                  </div>
+                )}
+                
+                {!isSimulationActive && (
+                  <div className="text-center py-8 text-gray-500">
+                    <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                    <p className="text-sm">
+                      Click "Simulate Emergency Alert" to demonstrate the emergency response protocol
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
