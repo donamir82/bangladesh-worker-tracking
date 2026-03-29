@@ -9,7 +9,7 @@ const WorldMap = ({ workers, onCountrySelect, selectedCountry }) => {
   const countryStats = useMemo(() => {
     const stats = {};
     workers.forEach(worker => {
-      const country = worker.location.country;
+      const country = worker.destination;
       if (!stats[country]) {
         stats[country] = { total: 0, safe: 0, emergency: 0, overdue: 0 };
       }

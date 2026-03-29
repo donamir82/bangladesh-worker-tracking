@@ -149,7 +149,7 @@ export default function GovernmentDashboard() {
     // Country filter (from navigation or map)
     const activeCountry = selectedCountry || mapSelectedCountry;
     if (activeCountry) {
-      result = result.filter(w => w.location.country === activeCountry);
+      result = result.filter(w => w.destination === activeCountry);
     }
     if (statusFilter !== 'all') result = result.filter(w => w.status === statusFilter);
     if (jobFilter !== 'all') result = result.filter(w => w.jobCategory === jobFilter);
@@ -187,7 +187,7 @@ export default function GovernmentDashboard() {
   const countryStats = useMemo(() => {
     const map = {};
     workers.forEach(w => {
-      const country = w.location.country;
+      const country = w.destination;
       if (!map[country]) map[country] = { total: 0, safe: 0, overdue: 0, emergency: 0 };
       map[country].total++;
       if (w.status === 'safe') map[country].safe++;
