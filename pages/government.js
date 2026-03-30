@@ -15,6 +15,7 @@ import {
   EmergencyBanner, 
   EmergencyTimeline, 
   EmergencyControls, 
+  EmergencyStartControls,
   EmergencyStats 
 } from '../components/EmergencySimulation';
 
@@ -118,7 +119,13 @@ export default function GovernmentDashboard() {
   // Emergency simulation state
   const {
     simulation,
+    emergencySteps,
     startEmergencySimulation,
+    advanceStep,
+    markStepComplete,
+    markStepInProgress,
+    skipStep,
+    closeIssue,
     resetSimulation,
     isSimulationActive
   } = useEmergencySimulation();
@@ -385,7 +392,7 @@ export default function GovernmentDashboard() {
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-bold text-gray-900">{t('Emergency Response System')}</h3>
-                  <EmergencyControls 
+                  <EmergencyStartControls 
                     workers={workers}
                     onSimulate={startEmergencySimulation}
                     isActive={isSimulationActive}
@@ -396,10 +403,26 @@ export default function GovernmentDashboard() {
                 {/* Emergency Stats */}
                 <EmergencyStats simulation={simulation} />
                 
-                {/* Emergency Timeline */}
+                {/* Emergency Simulation Layout */}
                 {isSimulationActive && (
-                  <div className="mt-6">
-                    <EmergencyTimeline simulation={simulation} />
+                  <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Left: Emergency Timeline */}
+                    <div>
+                      <EmergencyTimeline simulation={simulation} />
+                    </div>
+                    
+                    {/* Right: Interactive Controls */}
+                    <div>
+                      <EmergencyControls
+                        simulation={simulation}
+                        emergencySteps={emergencySteps}
+                        onAdvanceStep={advanceStep}
+                        onMarkStepComplete={markStepComplete}
+                        onMarkStepInProgress={markStepInProgress}
+                        onSkipStep={skipStep}
+                        onCloseIssue={closeIssue}
+                      />
+                    </div>
                   </div>
                 )}
                 
@@ -408,6 +431,9 @@ export default function GovernmentDashboard() {
                     <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-30" />
                     <p className="text-sm">
                       Click "Simulate Emergency Alert" to demonstrate the emergency response protocol
+                    </p>
+                    <p className="text-xs mt-2 text-gray-400">
+                      Interactive controls allow you to manually manage emergency steps and handle false alarms
                     </p>
                   </div>
                 )}

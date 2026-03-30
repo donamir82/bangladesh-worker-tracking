@@ -51,6 +51,150 @@ export function EmergencyBanner({ simulation, onReset }) {
   );
 }
 
+// Emergency Protocol Control Panel
+export function EmergencyControls({ 
+  simulation, 
+  emergencySteps, 
+  onAdvanceStep, 
+  onMarkStepComplete, 
+  onMarkStepInProgress, 
+  onSkipStep, 
+  onCloseIssue 
+}) {
+  if (!simulation.active) return null;
+
+  const getStepStatus = (stepIndex) => {
+    const timelineItem = simulation.timeline.find(t => t.stepIndex === stepIndex);
+    if (timelineItem) {
+      return timelineItem.stepStatus;
+    }
+    if (stepIndex <= simulation.currentStep) return 'complete';
+    if (stepIndex === simulation.currentStep + 1) return 'next';
+    return 'pending';
+  };
+
+  const getStepIcon = (stepIndex, status) => {
+    if (status === 'complete') return '✅';
+    if (status === 'in-progress') return '🔄';
+    if (status === 'skipped') return '⏭️';
+    if (status === 'next') return '▶️';
+    return '⏳';
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+        Emergency Protocol Control
+      </h4>
+
+      {/* Protocol Steps */}
+      <div className="space-y-3 mb-6">
+        {emergencySteps.map((step, index) => {
+          const status = getStepStatus(index);
+          const icon = getStepIcon(index, status);
+          
+          return (
+            <div key={step.id} className={`flex items-center justify-between p-3 rounded-lg border ${
+              status === 'complete' ? 'bg-green-50 border-green-200' :
+              status === 'in-progress' ? 'bg-yellow-50 border-yellow-200' :
+              status === 'next' ? 'bg-blue-50 border-blue-200' :
+              'bg-gray-50 border-gray-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <span className="text-lg">{step.icon}</span>
+                <div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {index + 1}. {step.event}
+                  </div>
+                  <div className="text-xs text-gray-600">{step.description}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{icon}</span>
+                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                  status === 'complete' ? 'bg-green-100 text-green-700' :
+                  status === 'in-progress' ? 'bg-yellow-100 text-yellow-700' :
+                  status === 'next' ? 'bg-blue-100 text-blue-700' :
+                  'bg-gray-100 text-gray-600'
+                }`}>
+                  {status.replace('-', ' ').toUpperCase()}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Control Buttons */}
+      {simulation.phase !== 'closed' && (
+        <div className="space-y-3">
+          <div className="text-sm font-medium text-gray-700 mb-2">Quick Actions:</div>
+          
+          <div className="grid grid-cols-2 gap-2">
+            {simulation.currentStep < emergencySteps.length - 1 && (
+              <>
+                <button
+                  onClick={() => onMarkStepComplete(simulation.currentStep + 1)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
+                >
+                  ✅ Complete Next
+                </button>
+                <button
+                  onClick={() => onMarkStepInProgress(simulation.currentStep + 1)}
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
+                >
+                  🔄 Mark In Progress
+                </button>
+                <button
+                  onClick={() => onSkipStep(simulation.currentStep + 1)}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
+                >
+                  ⏭️ Skip Step
+                </button>
+              </>
+            )}
+            
+            <div className="relative">
+              <select 
+                onChange={(e) => e.target.value && onCloseIssue(e.target.value)}
+                className="w-full bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors appearance-none cursor-pointer"
+                defaultValue=""
+              >
+                <option value="">❌ Close Issue</option>
+                <option value="False Alarm">False Alarm</option>
+                <option value="Resolved Safely">Resolved Safely</option>
+                <option value="Worker Contacted">Worker Contacted</option>
+                <option value="No Response Needed">No Response Needed</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Issue Status */}
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">
+            {simulation.phase === 'closed' 
+              ? `Closed: ${simulation.closureReason}`
+              : `Active • Step ${simulation.currentStep + 1} of ${emergencySteps.length}`
+            }
+          </span>
+          <span className="text-gray-600">
+            Duration: {Math.floor((new Date() - simulation.startTime) / 1000)}s
+          </span>
+        </div>
+        {simulation.contactAttempts > 0 && (
+          <div className="text-xs text-blue-600 mt-1">
+            Contact attempts: {simulation.contactAttempts}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Emergency Timeline Component
 export function EmergencyTimeline({ simulation }) {
   if (!simulation.active || simulation.timeline.length === 0) return null;
@@ -112,86 +256,7 @@ export function EmergencyTimeline({ simulation }) {
   );
 }
 
-// Emergency Simulation Control Panel
-export function EmergencyControls({ workers, onSimulate, isActive, onReset }) {
-  const [selectedWorker, setSelectedWorker] = React.useState('');
-  const [showWorkerSelect, setShowWorkerSelect] = React.useState(false);
-
-  // Get some workers that could be used for emergency simulation
-  const simulationWorkers = workers?.slice(0, 10) || [];
-
-  const handleSimulate = () => {
-    if (selectedWorker) {
-      const worker = workers.find(w => w.id === selectedWorker);
-      if (worker) {
-        onSimulate(worker);
-        setShowWorkerSelect(false);
-        setSelectedWorker('');
-      }
-    } else {
-      setShowWorkerSelect(true);
-    }
-  };
-
-  if (isActive) {
-    return (
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2 text-red-600">
-          <Radio className="h-4 w-4 animate-pulse" />
-          <span className="text-sm font-medium">Emergency Simulation Active</span>
-        </div>
-        <button
-          onClick={onReset}
-          className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          Reset Simulation
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center space-x-4">
-      {showWorkerSelect ? (
-        <div className="flex items-center space-x-3">
-          <select
-            value={selectedWorker}
-            onChange={(e) => setSelectedWorker(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none"
-          >
-            <option value="">Select Worker for Emergency Simulation</option>
-            {simulationWorkers.map(worker => (
-              <option key={worker.id} value={worker.id}>
-                {worker.name} - {worker.location.country}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={handleSimulate}
-            disabled={!selectedWorker}
-            className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            Simulate Emergency
-          </button>
-          <button
-            onClick={() => setShowWorkerSelect(false)}
-            className="text-gray-500 hover:text-gray-700 p-2"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={handleSimulate}
-          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
-        >
-          <AlertTriangle className="h-4 w-4" />
-          <span>Simulate Emergency Alert</span>
-        </button>
-      )}
-    </div>
-  );
-}
+// Removed duplicate function - see EmergencyStartControls below
 
 // Emergency Statistics Component
 export function EmergencyStats({ simulation }) {
@@ -247,9 +312,91 @@ export function EmergencyStats({ simulation }) {
   );
 }
 
+// Old Emergency Controls (for starting simulation)
+export function EmergencyStartControls({ workers, onSimulate, isActive, onReset }) {
+  const [selectedWorker, setSelectedWorker] = React.useState('');
+  const [showWorkerSelect, setShowWorkerSelect] = React.useState(false);
+
+  // Get some workers that could be used for emergency simulation
+  const simulationWorkers = workers?.slice(0, 10) || [];
+
+  const handleSimulate = () => {
+    if (selectedWorker) {
+      const worker = workers.find(w => w.id === selectedWorker);
+      if (worker) {
+        onSimulate(worker);
+        setShowWorkerSelect(false);
+        setSelectedWorker('');
+      }
+    } else {
+      setShowWorkerSelect(true);
+    }
+  };
+
+  if (isActive) {
+    return (
+      <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 text-red-600">
+          <Radio className="h-4 w-4 animate-pulse" />
+          <span className="text-sm font-medium">Emergency Simulation Active</span>
+        </div>
+        <button
+          onClick={onReset}
+          className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        >
+          Reset Simulation
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center space-x-4">
+      {showWorkerSelect ? (
+        <div className="flex items-center space-x-3">
+          <select
+            value={selectedWorker}
+            onChange={(e) => setSelectedWorker(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none"
+          >
+            <option value="">Select Worker for Emergency Simulation</option>
+            {simulationWorkers.map(worker => (
+              <option key={worker.id} value={worker.id}>
+                {worker.name} - {worker.destination}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={handleSimulate}
+            disabled={!selectedWorker}
+            className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            Simulate Emergency
+          </button>
+          <button
+            onClick={() => setShowWorkerSelect(false)}
+            className="text-gray-500 hover:text-gray-700 p-2"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={handleSimulate}
+          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+        >
+          <AlertTriangle className="h-4 w-4" />
+          <span>Simulate Emergency Alert</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default {
   EmergencyBanner,
   EmergencyTimeline,
   EmergencyControls,
+  EmergencyStartControls,
   EmergencyStats
 };

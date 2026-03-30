@@ -7,10 +7,14 @@ export function useEmergencySimulation() {
     workerId: null,
     workerName: null,
     startTime: null,
-    phase: 'idle', // idle, triggered, notifying, responding, resolved
+    phase: 'idle', // idle, triggered, contact, notifying, responding, resolved, closed
     timeline: [],
     alertsSent: [],
-    responseTime: 0
+    responseTime: 0,
+    currentStep: 0,
+    mode: 'auto', // auto, manual
+    closureReason: null,
+    contactAttempts: 0
   });
 
   const startEmergencySimulation = useCallback((worker) => {
@@ -28,91 +32,210 @@ export function useEmergencySimulation() {
           event: 'SOS Button Pressed',
           description: `${worker.name} activated emergency alert`,
           status: 'critical',
-          icon: '🚨'
+          icon: '🚨',
+          stepIndex: 0,
+          stepStatus: 'complete'
         }
       ],
       alertsSent: [],
-      responseTime: 0
+      responseTime: 0,
+      currentStep: 0,
+      mode: 'manual', // Start in manual mode for demo control
+      closureReason: null,
+      contactAttempts: 0
     });
-
-    // Simulate emergency response timeline
-    simulateEmergencyResponse();
   }, []);
 
-  const simulateEmergencyResponse = useCallback(() => {
-    const phases = [
-      {
-        delay: 1000,
-        phase: 'notifying',
-        event: 'Emergency Detected',
-        description: 'System initiated emergency protocol',
-        status: 'warning',
-        icon: '⚡',
-        alerts: ['Government Dashboard', 'Embassy System']
-      },
-      {
-        delay: 2500,
-        phase: 'notifying',
-        event: 'Family Notified',
-        description: 'SMS sent to emergency contacts',
-        status: 'info',
-        icon: '📱',
-        alerts: ['Family SMS', 'WhatsApp Message']
-      },
-      {
-        delay: 4000,
-        phase: 'notifying',
-        event: 'Embassy Contacted',
-        description: 'Local embassy emergency desk alerted',
-        status: 'info',
-        icon: '🏢',
-        alerts: ['Embassy Email', 'Emergency Hotline']
-      },
-      {
-        delay: 6000,
-        phase: 'responding',
-        event: 'Response Team Activated',
-        description: 'Welfare officer dispatched to location',
-        status: 'success',
-        icon: '🚑',
-        alerts: ['Field Officer', 'Local Authorities']
-      },
-      {
-        delay: 8000,
-        phase: 'responding',
-        event: 'Location Confirmed',
-        description: 'GPS coordinates shared with response team',
-        status: 'success',
-        icon: '📍',
-        alerts: ['GPS Tracker', 'Maps Integration']
-      },
-      {
-        delay: 10000,
-        phase: 'resolved',
-        event: 'Contact Established',
-        description: 'Worker safety confirmed, situation under control',
-        status: 'success',
-        icon: '✅',
-        alerts: ['All Clear Signal']
-      }
-    ];
+  // Define emergency protocol steps
+  const emergencySteps = [
+    {
+      id: 0,
+      event: 'SOS Button Pressed',
+      description: 'Emergency alert activated by worker',
+      icon: '🚨',
+      phase: 'triggered',
+      alerts: ['System Alert']
+    },
+    {
+      id: 1,
+      event: 'Try to Establish Contact',
+      description: 'Attempting direct communication with worker',
+      icon: '📞',
+      phase: 'contact',
+      alerts: ['Voice Call', 'SMS Message']
+    },
+    {
+      id: 2,
+      event: 'Family Notified',
+      description: 'Emergency contacts informed of situation',
+      icon: '👨‍👩‍👧‍👦',
+      phase: 'notifying',
+      alerts: ['Family SMS', 'WhatsApp Message']
+    },
+    {
+      id: 3,
+      event: 'Embassy Contacted',
+      description: 'Local embassy emergency desk alerted',
+      icon: '🏢',
+      phase: 'notifying',
+      alerts: ['Embassy Email', 'Emergency Hotline']
+    },
+    {
+      id: 4,
+      event: 'Response Team Activated',
+      description: 'Welfare officer dispatched to location',
+      icon: '🚑',
+      phase: 'responding',
+      alerts: ['Field Officer', 'Local Authorities']
+    },
+    {
+      id: 5,
+      event: 'Location Confirmed',
+      description: 'GPS coordinates shared with response team',
+      icon: '📍',
+      phase: 'responding',
+      alerts: ['GPS Tracker', 'Maps Integration']
+    },
+    {
+      id: 6,
+      event: 'Safety Verified',
+      description: 'Worker contact established and safety confirmed',
+      icon: '✅',
+      phase: 'resolved',
+      alerts: ['All Clear Signal']
+    }
+  ];
 
-    phases.forEach((phaseData, index) => {
-      setTimeout(() => {
-        setSimulation(prev => ({
-          ...prev,
-          phase: phaseData.phase,
-          timeline: [...prev.timeline, {
-            time: new Date(prev.startTime.getTime() + phaseData.delay),
-            event: phaseData.event,
-            description: phaseData.description,
-            status: phaseData.status,
-            icon: phaseData.icon
-          }],
-          alertsSent: phaseData.alerts ? [...prev.alertsSent, ...phaseData.alerts] : prev.alertsSent,
-          responseTime: Math.floor(phaseData.delay / 1000)
-        }));
-      }, phaseData.delay);
+  // Manual step control functions
+  const advanceStep = useCallback(() => {
+    setSimulation(prev => {
+      if (prev.currentStep >= emergencySteps.length - 1) return prev;
+      
+      const nextStep = emergencySteps[prev.currentStep + 1];
+      const now = new Date();
+      
+      return {
+        ...prev,
+        currentStep: prev.currentStep + 1,
+        phase: nextStep.phase,
+        timeline: [...prev.timeline, {
+          time: now,
+          event: nextStep.event,
+          description: nextStep.description,
+          status: prev.currentStep + 1 === emergencySteps.length - 1 ? 'success' : 'info',
+          icon: nextStep.icon,
+          stepIndex: nextStep.id,
+          stepStatus: 'complete'
+        }],
+        alertsSent: [...prev.alertsSent, ...nextStep.alerts],
+        responseTime: Math.floor((now - prev.startTime) / 1000),
+        contactAttempts: nextStep.id === 1 ? prev.contactAttempts + 1 : prev.contactAttempts
+      };
+    });
+  }, []);
+
+  const markStepComplete = useCallback((stepIndex) => {
+    setSimulation(prev => {
+      if (stepIndex > prev.currentStep + 1) return prev; // Can't skip ahead
+      
+      const step = emergencySteps[stepIndex];
+      const now = new Date();
+      
+      return {
+        ...prev,
+        currentStep: Math.max(prev.currentStep, stepIndex),
+        phase: step.phase,
+        timeline: prev.timeline.some(t => t.stepIndex === stepIndex) 
+          ? prev.timeline.map(t => 
+              t.stepIndex === stepIndex 
+                ? {...t, stepStatus: 'complete', time: now}
+                : t
+            )
+          : [...prev.timeline, {
+              time: now,
+              event: step.event,
+              description: step.description,
+              status: stepIndex === emergencySteps.length - 1 ? 'success' : 'info',
+              icon: step.icon,
+              stepIndex: stepIndex,
+              stepStatus: 'complete'
+            }],
+        alertsSent: prev.alertsSent.includes(step.alerts[0]) 
+          ? prev.alertsSent 
+          : [...prev.alertsSent, ...step.alerts],
+        responseTime: Math.floor((now - prev.startTime) / 1000)
+      };
+    });
+  }, []);
+
+  const markStepInProgress = useCallback((stepIndex) => {
+    setSimulation(prev => {
+      const step = emergencySteps[stepIndex];
+      const now = new Date();
+      
+      return {
+        ...prev,
+        currentStep: Math.max(prev.currentStep, stepIndex - 1),
+        phase: step.phase,
+        timeline: prev.timeline.some(t => t.stepIndex === stepIndex)
+          ? prev.timeline.map(t => 
+              t.stepIndex === stepIndex 
+                ? {...t, stepStatus: 'in-progress', time: now}
+                : t
+            )
+          : [...prev.timeline, {
+              time: now,
+              event: step.event,
+              description: step.description + ' (In Progress)',
+              status: 'warning',
+              icon: step.icon,
+              stepIndex: stepIndex,
+              stepStatus: 'in-progress'
+            }]
+      };
+    });
+  }, []);
+
+  const skipStep = useCallback((stepIndex) => {
+    setSimulation(prev => {
+      const step = emergencySteps[stepIndex];
+      const now = new Date();
+      
+      return {
+        ...prev,
+        currentStep: Math.max(prev.currentStep, stepIndex),
+        timeline: [...prev.timeline, {
+          time: now,
+          event: step.event + ' (Skipped)',
+          description: 'Step skipped for demonstration purposes',
+          status: 'info',
+          icon: '⏭️',
+          stepIndex: stepIndex,
+          stepStatus: 'skipped'
+        }]
+      };
+    });
+  }, []);
+
+  const closeIssue = useCallback((reason) => {
+    setSimulation(prev => {
+      const now = new Date();
+      
+      return {
+        ...prev,
+        phase: 'closed',
+        closureReason: reason,
+        timeline: [...prev.timeline, {
+          time: now,
+          event: 'Issue Closed',
+          description: `Emergency closed: ${reason}`,
+          status: reason === 'False Alarm' ? 'info' : 'success',
+          icon: reason === 'False Alarm' ? '❌' : '✅',
+          stepIndex: -1,
+          stepStatus: 'closed'
+        }],
+        responseTime: Math.floor((now - prev.startTime) / 1000)
+      };
     });
   }, []);
 
@@ -125,7 +248,11 @@ export function useEmergencySimulation() {
       phase: 'idle',
       timeline: [],
       alertsSent: [],
-      responseTime: 0
+      responseTime: 0,
+      currentStep: 0,
+      mode: 'auto',
+      closureReason: null,
+      contactAttempts: 0
     });
   }, []);
 
@@ -143,7 +270,13 @@ export function useEmergencySimulation() {
 
   return {
     simulation,
+    emergencySteps,
     startEmergencySimulation,
+    advanceStep,
+    markStepComplete,
+    markStepInProgress,
+    skipStep,
+    closeIssue,
     resetSimulation,
     getSimulationStats,
     isSimulationActive: simulation.active
