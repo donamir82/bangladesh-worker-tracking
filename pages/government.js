@@ -9,26 +9,7 @@ import {
 } from 'lucide-react';
 import useEmergencySimulation from '../hooks/useEmergencySimulation';
 import { useTranslation, useLanguage } from '../hooks/useLanguage';
-import WorldMap from '../components/WorldMap';
-import dynamic from 'next/dynamic';
 
-// Professional Leaflet Map (dynamically imported to avoid SSR issues)
-const ProfessionalMap = dynamic(
-  () => import('../components/SimpleLeafletMap'),
-  { 
-    ssr: false,
-    loading: () => (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading professional map...</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-);
 import LiveAnalytics from '../components/LiveAnalytics';
 import { 
   EmergencyBanner, 
@@ -128,9 +109,7 @@ export default function GovernmentDashboard() {
   const [sortField, setSortField] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
   const [selectedWorker, setSelectedWorker] = useState(null);
-  const [useLeafletMap, setUseLeafletMap] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [mapSelectedCountry, setMapSelectedCountry] = useState(null);
 
   // Translation and language hooks
   const { t } = useTranslation();
@@ -161,13 +140,7 @@ export default function GovernmentDashboard() {
     setJobFilter('all');
   };
 
-  // Map country selection handler
-  const handleMapCountrySelect = (country) => {
-    setMapSelectedCountry(country);
-    setSelectedCountry(null); // Clear navigation selection
-    setView('workers'); // Show workers view
-    setPage(1);
-  };
+
 
   // Status filter handler
   const handleStatusFilter = (status) => {
@@ -182,10 +155,9 @@ export default function GovernmentDashboard() {
   const filteredWorkers = useMemo(() => {
     let result = [...workers];
     
-    // Country filter (from navigation or map)
-    const activeCountry = selectedCountry || mapSelectedCountry;
-    if (activeCountry) {
-      result = result.filter(w => w.destination === activeCountry);
+    // Country filter (from navigation)
+    if (selectedCountry) {
+      result = result.filter(w => w.destination === selectedCountry);
     }
     if (statusFilter !== 'all') result = result.filter(w => w.status === statusFilter);
     if (jobFilter !== 'all') result = result.filter(w => w.jobCategory === jobFilter);
@@ -209,7 +181,7 @@ export default function GovernmentDashboard() {
       return 0;
     });
     return result;
-  }, [selectedCountry, mapSelectedCountry, statusFilter, jobFilter, searchQuery, sortField, sortDir]);
+  }, [selectedCountry, statusFilter, jobFilter, searchQuery, sortField, sortDir]);
 
   const totalPages = Math.ceil(filteredWorkers.length / PAGE_SIZE);
   const pagedWorkers = filteredWorkers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -460,51 +432,7 @@ export default function GovernmentDashboard() {
               </div>
             </div>
 
-            {/* Map Section with Toggle */}
-            <div className="mb-8">
-              {/* Map Type Toggle */}
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-900">Global Worker Distribution</h3>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-gray-600">Map Type:</span>
-                  <button
-                    onClick={() => setUseLeafletMap(false)}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      !useLeafletMap 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    Standard Map
-                  </button>
-                  <button
-                    onClick={() => setUseLeafletMap(true)}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      useLeafletMap 
-                        ? 'bg-green-600 text-white' 
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    🗺️ Professional Map
-                  </button>
-                </div>
-              </div>
 
-              {/* Map Display */}
-              {useLeafletMap ? (
-                <ProfessionalMap 
-                  workers={workers} 
-                  onCountrySelect={handleMapCountrySelect}
-                  selectedCountry={mapSelectedCountry}
-                />
-              ) : (
-                <WorldMap 
-                  workers={workers} 
-                  onCountrySelect={handleMapCountrySelect}
-                  selectedCountry={mapSelectedCountry}
-                />
-              )}
-            </div>
 
             {/* Live Analytics */}
             <div className="mb-8">
