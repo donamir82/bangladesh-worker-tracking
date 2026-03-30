@@ -1,6 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Users, AlertTriangle, CheckCircle, MapPin } from 'lucide-react';
+
+// Only import Leaflet components on client side
+let MapContainer, TileLayer, Marker, Popup;
+if (typeof window !== 'undefined') {
+  const leaflet = require('react-leaflet');
+  MapContainer = leaflet.MapContainer;
+  TileLayer = leaflet.TileLayer;
+  Marker = leaflet.Marker;
+  Popup = leaflet.Popup;
+}
 
 // Custom map component with professional Leaflet/OpenStreetMap
 const ProfessionalMap = ({ workers, onCountrySelect, selectedCountry }) => {
