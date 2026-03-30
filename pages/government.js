@@ -9,7 +9,25 @@ import {
 } from 'lucide-react';
 import useEmergencySimulation from '../hooks/useEmergencySimulation';
 import { useTranslation, useLanguage } from '../hooks/useLanguage';
-import WorldMap from '../components/WorldMap';
+import dynamic from 'next/dynamic';
+
+// Import map component dynamically to avoid SSR issues with Leaflet
+const ProfessionalMap = dynamic(
+  () => import('../components/ProfessionalMap'),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading professional map...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+);
 import LiveAnalytics from '../components/LiveAnalytics';
 import { 
   EmergencyBanner, 
@@ -440,9 +458,9 @@ export default function GovernmentDashboard() {
               </div>
             </div>
 
-            {/* World Map */}
+            {/* Professional Interactive Map */}
             <div className="mb-8">
-              <WorldMap 
+              <ProfessionalMap 
                 workers={workers} 
                 onCountrySelect={handleMapCountrySelect}
                 selectedCountry={mapSelectedCountry}
