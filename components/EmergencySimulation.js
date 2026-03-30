@@ -88,7 +88,7 @@ export function EmergencyControls({
         Emergency Protocol Control
       </h4>
 
-      {/* Protocol Steps */}
+      {/* Protocol Steps with Individual Controls */}
       <div className="space-y-3 mb-6">
         {emergencySteps.map((step, index) => {
           const status = getStepStatus(index);
@@ -101,15 +101,16 @@ export function EmergencyControls({
               status === 'next' ? 'bg-blue-50 border-blue-200' :
               'bg-gray-50 border-gray-200'
             }`}>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-1">
                 <span className="text-lg">{step.icon}</span>
-                <div>
+                <div className="flex-1">
                   <div className="text-sm font-medium text-gray-900">
                     {index + 1}. {step.event}
                   </div>
                   <div className="text-xs text-gray-600">{step.description}</div>
                 </div>
               </div>
+              
               <div className="flex items-center gap-2">
                 <span className="text-lg">{icon}</span>
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${
@@ -120,53 +121,66 @@ export function EmergencyControls({
                 }`}>
                   {status.replace('-', ' ').toUpperCase()}
                 </span>
+                
+                {/* Individual Step Controls - Allow any step to be updated */}
+                {simulation.phase !== 'closed' && status !== 'complete' && (
+                  <div className="flex gap-1 ml-2">
+                    <button
+                      onClick={() => onMarkStepComplete(index)}
+                      className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
+                      title="Mark Complete"
+                    >
+                      ✅
+                    </button>
+                    <button
+                      onClick={() => onMarkStepInProgress(index)}
+                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
+                      title="Mark In Progress"
+                    >
+                      🔄
+                    </button>
+                  </div>
+                )}
+                
+                {/* Show quick reset button for completed steps */}
+                {status === 'complete' && (
+                  <button
+                    onClick={() => onMarkStepInProgress(index)}
+                    className="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
+                    title="Reset to In Progress"
+                  >
+                    ↻
+                  </button>
+                )}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Control Buttons */}
+      {/* Global Controls */}
       {simulation.phase !== 'closed' && (
         <div className="space-y-3">
-          <div className="text-sm font-medium text-gray-700 mb-2">Quick Actions:</div>
+          <div className="text-sm font-medium text-gray-700 mb-2">Global Actions:</div>
           
-          <div className="grid grid-cols-2 gap-2">
-            {simulation.currentStep < emergencySteps.length - 1 && (
-              <>
-                <button
-                  onClick={() => onMarkStepComplete(simulation.currentStep + 1)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
-                >
-                  ✅ Complete Next
-                </button>
-                <button
-                  onClick={() => onMarkStepInProgress(simulation.currentStep + 1)}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
-                >
-                  🔄 Mark In Progress
-                </button>
-                <button
-                  onClick={() => onSkipStep(simulation.currentStep + 1)}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
-                >
-                  ⏭️ Skip Step
-                </button>
-              </>
-            )}
-            
+          <div className="grid grid-cols-1 gap-2">
             <div className="relative">
               <select 
                 onChange={(e) => e.target.value && onCloseIssue(e.target.value)}
                 className="w-full bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors appearance-none cursor-pointer"
                 defaultValue=""
               >
-                <option value="">❌ Close Issue</option>
-                <option value="False Alarm">False Alarm</option>
-                <option value="Resolved Safely">Resolved Safely</option>
-                <option value="Worker Contacted">Worker Contacted</option>
+                <option value="">❌ Close Emergency Issue</option>
+                <option value="False Alarm">False Alarm - Accidental SOS</option>
+                <option value="Resolved Safely">Resolved Safely - Worker Contacted</option>
+                <option value="Worker Called Back">Worker Called Back - All Clear</option>
                 <option value="No Response Needed">No Response Needed</option>
               </select>
+            </div>
+            
+            <div className="text-xs text-gray-500 mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+              💡 <strong>Independent Step Control:</strong> Click ✅ or 🔄 on any step above to update its status. 
+              Steps can be completed in any order to handle real emergency situations.
             </div>
           </div>
         </div>

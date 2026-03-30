@@ -136,25 +136,23 @@ export function useEmergencySimulation() {
 
   const markStepComplete = useCallback((stepIndex) => {
     setSimulation(prev => {
-      if (stepIndex > prev.currentStep + 1) return prev; // Can't skip ahead
-      
       const step = emergencySteps[stepIndex];
       const now = new Date();
       
       return {
         ...prev,
-        currentStep: Math.max(prev.currentStep, stepIndex),
-        phase: step.phase,
+        currentStep: Math.max(prev.currentStep, stepIndex), // Update highest step reached
+        phase: stepIndex === emergencySteps.length - 1 ? 'resolved' : step.phase, // Mark resolved if last step
         timeline: prev.timeline.some(t => t.stepIndex === stepIndex) 
           ? prev.timeline.map(t => 
               t.stepIndex === stepIndex 
-                ? {...t, stepStatus: 'complete', time: now}
+                ? {...t, stepStatus: 'complete', time: now, description: step.description + ' ✓ Completed'}
                 : t
             )
           : [...prev.timeline, {
               time: now,
               event: step.event,
-              description: step.description,
+              description: step.description + ' ✓ Completed',
               status: stepIndex === emergencySteps.length - 1 ? 'success' : 'info',
               icon: step.icon,
               stepIndex: stepIndex,
@@ -163,7 +161,8 @@ export function useEmergencySimulation() {
         alertsSent: prev.alertsSent.includes(step.alerts[0]) 
           ? prev.alertsSent 
           : [...prev.alertsSent, ...step.alerts],
-        responseTime: Math.floor((now - prev.startTime) / 1000)
+        responseTime: Math.floor((now - prev.startTime) / 1000),
+        contactAttempts: stepIndex === 1 ? prev.contactAttempts + 1 : prev.contactAttempts
       };
     });
   }, []);
@@ -175,23 +174,23 @@ export function useEmergencySimulation() {
       
       return {
         ...prev,
-        currentStep: Math.max(prev.currentStep, stepIndex - 1),
         phase: step.phase,
         timeline: prev.timeline.some(t => t.stepIndex === stepIndex)
           ? prev.timeline.map(t => 
               t.stepIndex === stepIndex 
-                ? {...t, stepStatus: 'in-progress', time: now}
+                ? {...t, stepStatus: 'in-progress', time: now, description: step.description + ' 🔄 In Progress'}
                 : t
             )
           : [...prev.timeline, {
               time: now,
               event: step.event,
-              description: step.description + ' (In Progress)',
+              description: step.description + ' 🔄 In Progress',
               status: 'warning',
               icon: step.icon,
               stepIndex: stepIndex,
               stepStatus: 'in-progress'
-            }]
+            }],
+        contactAttempts: stepIndex === 1 ? prev.contactAttempts + 1 : prev.contactAttempts
       };
     });
   }, []);
