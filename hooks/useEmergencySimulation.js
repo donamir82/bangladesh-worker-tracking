@@ -239,6 +239,7 @@ export function useEmergencySimulation() {
   }, []);
 
   const resetSimulation = useCallback(() => {
+    // Force complete state reset
     setSimulation({
       active: false,
       workerId: null,
@@ -249,7 +250,7 @@ export function useEmergencySimulation() {
       alertsSent: [],
       responseTime: 0,
       currentStep: 0,
-      mode: 'auto',
+      mode: 'manual', // Reset to manual mode for demo control
       closureReason: null,
       contactAttempts: 0
     });

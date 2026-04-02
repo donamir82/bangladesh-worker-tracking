@@ -331,6 +331,14 @@ export function EmergencyStartControls({ workers, onSimulate, isActive, onReset 
   const [selectedWorker, setSelectedWorker] = React.useState('');
   const [showWorkerSelect, setShowWorkerSelect] = React.useState(false);
 
+  // Reset local state when simulation becomes inactive
+  React.useEffect(() => {
+    if (!isActive) {
+      setSelectedWorker('');
+      setShowWorkerSelect(false);
+    }
+  }, [isActive]);
+
   // Get some workers that could be used for emergency simulation
   const simulationWorkers = workers?.slice(0, 10) || [];
 
@@ -338,13 +346,23 @@ export function EmergencyStartControls({ workers, onSimulate, isActive, onReset 
     if (selectedWorker) {
       const worker = workers.find(w => w.id === selectedWorker);
       if (worker) {
-        onSimulate(worker);
+        // Reset local state before starting new simulation
         setShowWorkerSelect(false);
         setSelectedWorker('');
+        // Start new simulation with fresh worker
+        onSimulate(worker);
       }
     } else {
       setShowWorkerSelect(true);
     }
+  };
+
+  const handleReset = () => {
+    // Reset local state immediately
+    setSelectedWorker('');
+    setShowWorkerSelect(false);
+    // Call the main reset function
+    onReset();
   };
 
   if (isActive) {
@@ -355,7 +373,7 @@ export function EmergencyStartControls({ workers, onSimulate, isActive, onReset 
           <span className="text-sm font-medium">Emergency Simulation Active</span>
         </div>
         <button
-          onClick={onReset}
+          onClick={handleReset}
           className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
         >
           Reset Simulation

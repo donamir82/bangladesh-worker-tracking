@@ -385,6 +385,7 @@ export default function GovernmentDashboard() {
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-bold text-gray-900">{t('Emergency Response System')}</h3>
                   <EmergencyStartControls 
+                    key={`emergency-controls-${simulation.active ? simulation.workerId : 'inactive'}`}
                     workers={workers}
                     onSimulate={startEmergencySimulation}
                     isActive={isSimulationActive}
