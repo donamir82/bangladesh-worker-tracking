@@ -90,7 +90,29 @@ const translations = {
     'Response Time': 'Response Time',
     'Alerts Sent': 'Alerts Sent',
     'Timeline Events': 'Timeline Events',
-    'Current Phase': 'Current Phase'
+    'Current Phase': 'Current Phase',
+
+    // Homepage Content
+    'Protecting Our Workers Abroad': 'Protecting Our Workers Abroad',
+    'Real-time tracking and safety monitoring for 1.5+ million Bangladeshi workers across the Middle East. Ensuring their safety, security, and well-being.': 'Real-time tracking and safety monitoring for 1.5+ million Bangladeshi workers across the Middle East. Ensuring their safety, security, and well-being.',
+    'Protected Workers': 'Protected Workers',
+    'Safe Status': 'Safe Status',
+    'Countries': 'Countries',
+    'Embassies': 'Embassies',
+    'Complete oversight of all overseas workers. National statistics, emergency alerts, and policy insights for ministry officials.': 'Complete oversight of all overseas workers. National statistics, emergency alerts, and policy insights for ministry officials.',
+    'Access Dashboard': 'Access Dashboard',
+    'Regional worker monitoring for embassy staff. Track workers in your jurisdiction, respond to emergencies, and coordinate with local authorities.': 'Regional worker monitoring for embassy staff. Track workers in your jurisdiction, respond to emergencies, and coordinate with local authorities.',
+    'Embassy Access': 'Embassy Access',
+    'Stay connected with your loved ones abroad. Check their safety status, location updates, and communicate through secure channels.': 'Stay connected with your loved ones abroad. Check their safety status, location updates, and communicate through secure channels.',
+    'Family Login': 'Family Login',
+    'System Features': 'System Features',
+    'Real-time Location': 'Real-time Location',
+    'GPS tracking with privacy controls and emergency location sharing': 'GPS tracking with privacy controls and emergency location sharing',
+    'SOS Alerts': 'SOS Alerts',
+    'Instant emergency notifications to embassies and authorities': 'Instant emergency notifications to embassies and authorities',
+    'Family Connect': 'Family Connect',
+    'Secure communication channels between workers and families': 'Secure communication channels between workers and families',
+    'Powered by': 'Powered by'
   },
   
   bn: {
@@ -178,7 +200,29 @@ const translations = {
     'Response Time': 'প্রতিক্রিয়ার সময়',
     'Alerts Sent': 'সতর্কতা পাঠানো',
     'Timeline Events': 'সময়রেখার ঘটনা',
-    'Current Phase': 'বর্তমান পর্যায়'
+    'Current Phase': 'বর্তমান পর্যায়',
+
+    // Homepage Content
+    'Protecting Our Workers Abroad': 'বিদেশে আমাদের শ্রমিকদের সুরক্ষা',
+    'Real-time tracking and safety monitoring for 1.5+ million Bangladeshi workers across the Middle East. Ensuring their safety, security, and well-being.': 'মধ্যপ্রাচ্য জুড়ে ১৫+ লাখ বাংলাদেশী শ্রমিকের জন্য রিয়েল-টাইম ট্র্যাকিং এবং নিরাপত্তা নিরীক্ষণ। তাদের নিরাপত্তা, সুরক্ষা এবং কল্যাণ নিশ্চিত করা।',
+    'Protected Workers': 'সুরক্ষিত শ্রমিক',
+    'Safe Status': 'নিরাপদ অবস্থা',
+    'Countries': 'দেশসমূহ',
+    'Embassies': 'দূতাবাসসমূহ',
+    'Complete oversight of all overseas workers. National statistics, emergency alerts, and policy insights for ministry officials.': 'সমস্ত প্রবাসী শ্রমিকের সম্পূর্ণ তত্ত্বাবধান। মন্ত্রণালয়ের কর্মকর্তাদের জন্য জাতীয় পরিসংখ্যান, জরুরি সতর্কতা এবং নীতি অন্তর্দৃষ্টি।',
+    'Access Dashboard': 'ড্যাশবোর্ড অ্যাক্সেস',
+    'Regional worker monitoring for embassy staff. Track workers in your jurisdiction, respond to emergencies, and coordinate with local authorities.': 'দূতাবাস কর্মীদের জন্য আঞ্চলিক শ্রমিক পর্যবেক্ষণ। আপনার এখতিয়ারে শ্রমিকদের ট্র্যাক করুন, জরুরি অবস্থায় সাড়া দিন এবং স্থানীয় কর্তৃপক্ষের সাথে সমন্বয় করুন।',
+    'Embassy Access': 'দূতাবাস অ্যাক্সেস',
+    'Stay connected with your loved ones abroad. Check their safety status, location updates, and communicate through secure channels.': 'বিদেশে আপনার প্রিয়জনদের সাথে যুক্ত থাকুন। তাদের নিরাপত্তার অবস্থা, অবস্থান আপডেট দেখুন এবং নিরাপদ চ্যানেলের মাধ্যমে যোগাযোগ করুন।',
+    'Family Login': 'পারিবারিক লগইন',
+    'System Features': 'সিস্টেম বৈশিষ্ট্য',
+    'Real-time Location': 'রিয়েল-টাইম অবস্থান',
+    'GPS tracking with privacy controls and emergency location sharing': 'গোপনীয়তা নিয়ন্ত্রণ এবং জরুরি অবস্থান ভাগাভাগি সহ জিপিএস ট্র্যাকিং',
+    'SOS Alerts': 'এসওএস সতর্কতা',
+    'Instant emergency notifications to embassies and authorities': 'দূতাবাস এবং কর্তৃপক্ষের কাছে তাৎক্ষণিক জরুরি বিজ্ঞপ্তি',
+    'Family Connect': 'পারিবারিক সংযোগ',
+    'Secure communication channels between workers and families': 'শ্রমিক এবং পরিবারের মধ্যে নিরাপদ যোগাযোগ চ্যানেল',
+    'Powered by': 'চালিত'
   }
 };
 
